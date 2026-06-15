@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mobile AI 검색 최적화 카드뉴스 빌더 V5.0</title>
+<style>
+:root{
+  --bg:#0d0f13;--panel:#171a21;--line:#2b313d;--text:#f5f7fb;--muted:#9ca6b5;
+  --accent:#59c586;--blue:#4f7cff;--card1:#41161d;--card2:#8c824d;--theme-accent:#F5D97A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR","Segoe UI",Arial,sans-serif}
+.wrap{max-width:1380px;margin:0 auto;padding:22px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:16px}
+.badge{display:inline-block;background:#12351f;color:#70e09a;border:1px solid #255f38;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:800;margin-bottom:8px}
+h1{font-size:22px;margin:0 0 4px;font-weight:950;letter-spacing:-.5px}
+.desc{font-size:13px;color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:390px 1fr 390px;gap:16px;align-items:start}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px}
+.box h2{font-size:14px;margin:0 0 12px;color:#dbeafe}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+input,textarea,select{width:100%;background:#0c0e13;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px;font-size:14px;font-family:inherit;outline:none}
+textarea{min-height:112px;resize:vertical;line-height:1.55}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.optionGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.check{display:flex;align-items:center;gap:6px;background:#0c0e13;border:1px solid var(--line);padding:9px;border-radius:10px;font-size:12px;color:#dbe4f0}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button{border:none;border-radius:10px;background:var(--blue);color:#fff;padding:10px 13px;font-weight:900;font-size:13px;cursor:pointer;font-family:inherit}
+button:hover{filter:brightness(1.08)}
+button.secondary{background:#252c39;color:#dfe7f5;border:1px solid #394353}
+button.green{background:#3a7a5c}
+button.smallBtn{padding:7px 9px;font-size:12px}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+.previewGrid{display:grid;grid-template-columns:1fr 112px;gap:12px}
+.viewer{width:100%;max-width:560px;margin:0 auto}
+.cardCanvas{width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;border:1px solid #303846;position:relative;background:#111}
+.slide{position:absolute;inset:0;display:none;overflow:hidden;background:#111}
+.slide.active{display:block}
+.slideBg{position:absolute;inset:0;background-size:cover;background-position:center}
+.slideBg.fallback1{background:linear-gradient(155deg,var(--card1),#080809 82%)}
+.slideBg.fallback2{background:linear-gradient(155deg,var(--card2),#14140c 82%)}
+.slideOverlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.18) 40%,rgba(0,0,0,.86) 100%)}
+.slideInner{position:relative;z-index:3;height:100%;padding:7%;display:flex;flex-direction:column}
+.slideTop{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.65);font-weight:800}
+.slideMain{margin-top:auto;padding-bottom:4%}
+.pill{display:inline-flex;background:#fff;color:#111;border-radius:999px;padding:6px 15px;font-size:12px;font-weight:950;letter-spacing:.1px;margin-bottom:14px}
+.title{font-weight:1000;color:#fff;letter-spacing:-1.5px;line-height:1.08;font-size:clamp(30px,5.6vw,48px);text-shadow:0 4px 12px rgba(0,0,0,.38);word-break:keep-all}
+.title.cover{font-size:clamp(34px,6.2vw,54px);line-height:1.05;letter-spacing:-1.8px}
+.body{margin-top:16px;font-size:clamp(12px,1.75vw,15px);font-weight:700;line-height:1.68;color:rgba(255,255,255,.9);word-break:keep-all}
+.body p{margin:0 0 7px}
+.slide.summary .title{font-size:clamp(29px,5.25vw,45px);line-height:1.08;letter-spacing:-1.45px}
+.slide.summary .body{font-size:clamp(11px,1.55vw,14px);line-height:1.62;margin-top:14px}
+.hashtagArea{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px;max-height:92px;overflow:hidden}
+.hashtagChip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.92);font-size:clamp(9px,1.35vw,12px);font-weight:850;line-height:1.25;white-space:nowrap}
+.thumbs{display:flex;flex-direction:column;gap:8px;max-height:660px;overflow:auto}
+.thumb{height:78px;border-radius:10px;overflow:hidden;border:2px solid var(--line);background:#111;position:relative;cursor:pointer}
+.thumb.active{border-color:var(--accent)}
+.thumb::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1),rgba(0,0,0,.76))}
+.thumb span{position:absolute;left:6px;right:6px;bottom:6px;font-size:10px;font-weight:900;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:8px 0 12px}
+.nav span{font-size:13px;color:var(--muted)}
+.scoreGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.score{background:#0c0e13;border:1px solid var(--line);border-radius:12px;text-align:center;padding:11px}
+.score span{font-size:11px;color:var(--muted)}.score b{display:block;font-size:25px;margin:3px 0}
+.bar{height:7px;background:#2d3442;border-radius:999px;overflow:hidden}.fill{height:100%;background:var(--accent);width:0}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid #29303b;font-size:13px;line-height:1.5}
+.kv b{color:#9cc6ff}
+.qItem,.issue,.promptBox{background:#0c0e13;border:1px solid var(--line);border-radius:11px;padding:9px;margin-bottom:8px;font-size:13px;line-height:1.45}
+.qItem strong{display:block;margin-bottom:4px}.qItem em{font-style:normal;color:#8ee0a9;font-size:12px}
+.issue{border-left:3px solid #facc15}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap}.tag{background:#24324a;color:#dbeafe;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:700}
+.fileRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:7px}
+.fileName{font-size:12px;color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.promptBox label{margin:0 0 6px;color:#9cc6ff;font-weight:900}.promptBox textarea{min-height:76px;font-size:12px;line-height:1.45}
+.promptTop{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:5px}
+.modeNotice{font-size:12px;color:var(--muted);background:#0c0e13;border:1px dashed #3a4558;border-radius:10px;padding:9px;margin-top:8px}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.output{background:#0c0e13;border:1px solid var(--line);border-radius:11px;padding:11px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:250px;overflow:auto}
+
+.title .hl{
+  color:var(--theme-accent,#F5D97A);
+  text-shadow:0 3px 12px rgba(0,0,0,.45);
+}
+.accentInfo{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:8px;
+}
+.accentSwatch{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:var(--theme-accent,#F5D97A);
+  border:1px solid rgba(255,255,255,.35);
+}
+
+.tabs{display:flex;gap:6px;margin-bottom:10px}.tab{padding:7px 10px;background:#0c0e13;border:1px solid var(--line);border-radius:999px;font-size:12px;color:#cdd6e5;cursor:pointer}.tab.active{background:#264160;border-color:#4f7cff;color:white}
+@media(max-width:1180px){.grid{grid-template-columns:1fr}.previewGrid{grid-template-columns:1fr}.thumbs{flex-direction:row}.thumb{min-width:82px}.viewer{max-width:520px}}
+
+.editCard{
+  background:#0c0e13;
+  border:1px solid var(--line);
+  border-radius:11px;
+  padding:9px;
+  margin-bottom:8px;
+}
+.editCard h3{margin:0 0 8px;font-size:13px;color:#9cc6ff}
+.editCard textarea{min-height:54px;font-size:12px;line-height:1.45}
+.editCard .bodyEdit{min-height:78px}
+.editCard .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ===== Mobile optimized override ===== */
+@media (max-width: 768px){
+  html,body{width:100%;overflow-x:hidden}
+  .wrap{width:100%;padding:10px}
+  .header{flex-direction:column;gap:10px;margin-bottom:10px}
+  h1{font-size:19px;line-height:1.25}
+  .desc{font-size:12px;line-height:1.45}
+  .badge{font-size:11px;padding:4px 9px}
+  .grid{display:flex;flex-direction:column;gap:12px}
+  .box{border-radius:12px;padding:12px}
+  .box h2{font-size:13px;margin-bottom:10px}
+  .row2,.optionGrid,.editCard .meta{grid-template-columns:1fr;gap:6px}
+  label{font-size:11px;margin:8px 0 4px}
+  input,textarea,select{font-size:14px;padding:10px;border-radius:9px}
+  textarea{min-height:96px}
+  .btns{display:grid;grid-template-columns:1fr;gap:7px}
+  button{width:100%;min-height:42px;font-size:13px;padding:10px}
+  button.smallBtn{width:auto;min-height:36px;padding:7px 10px}
+  .previewGrid{grid-template-columns:1fr;gap:10px}
+  .viewer{width:100%;max-width:100%}
+  .cardCanvas{width:100%;max-width:430px;margin:0 auto;border-radius:12px}
+  .slideInner{padding:7.5%}
+  .slideTop{font-size:10.5px}
+  .pill{font-size:10.5px;padding:5px 12px;margin-bottom:10px}
+  .title{font-size:clamp(30px,10.8vw,43px);line-height:1.08;letter-spacing:-1.25px}
+  .title.cover{font-size:clamp(32px,11.5vw,47px);line-height:1.04}
+  .body{font-size:clamp(11px,3.6vw,14px);line-height:1.62;margin-top:12px}
+  .hashtagArea{gap:5px;max-height:78px;margin-top:11px}
+  .hashtagChip{font-size:10px;padding:4px 7px}
+  .thumbs{flex-direction:row;gap:7px;overflow-x:auto;max-height:none;padding-bottom:4px}
+  .thumb{min-width:72px;width:72px;height:66px;border-radius:9px}
+  .thumb span{font-size:9px}
+  .nav{gap:8px}
+  .nav span{min-width:52px;text-align:center;font-size:12px}
+  .nav button{width:auto;flex:1}
+  .scoreGrid{grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .score{padding:8px 6px}
+  .score b{font-size:21px}
+  .kv{grid-template-columns:72px 1fr;font-size:12px;gap:6px}
+  .tabs{overflow-x:auto;white-space:nowrap}
+  .tab{flex:1;min-width:max-content;text-align:center}
+  .editCard textarea{min-height:58px}
+  .editCard .bodyEdit{min-height:88px}
+  .fileRow{grid-template-columns:1fr auto}
+  .promptBox textarea{min-height:96px}
+}
+@media (max-width: 420px){
+  .wrap{padding:8px}
+  .box{padding:10px}
+  .cardCanvas{max-width:100%}
+  .title{font-size:clamp(28px,10.2vw,39px)}
+  .title.cover{font-size:clamp(30px,10.8vw,42px)}
+  .body{font-size:clamp(10.5px,3.45vw,13px)}
+}
+
+
+/* ===== Brand logo / QR CTA ===== */
+.brandMark{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-width:138px;
+  height:42px;
+}
+.brandLogo{
+  max-width:138px;
+  max-height:42px;
+  object-fit:contain;
+  display:block;
+  filter:none;
+  transform:none;
+}
+.brandText{
+  font-size:12px;
+  color:rgba(255,255,255,.65);
+  font-weight:800;
+  white-space:nowrap;
+}
+.qrCta{
+  margin-top:0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:0;
+  max-width:100%;
+  margin-left:auto;
+  flex:0 0 auto;
+}
+.qrBox{
+  width:44px;
+  height:44px;
+  border-radius:8px;
+  background:rgba(255,255,255,.96);
+  padding:3px;
+  border:2px solid var(--theme-accent,#F5D97A);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  box-shadow:0 5px 16px rgba(0,0,0,.30), 0 0 14px color-mix(in srgb, var(--theme-accent,#F5D97A) 35%, transparent);
+}
+.qrBox img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+.qrText{display:none}
+.qrText b{display:none}
+
+@media (max-width:768px){
+  .brandMark{min-width:114px;height:36px}
+  .brandLogo{max-width:114px;max-height:36px}
+  .brandText{font-size:10.5px}
+  .qrCta{gap:0;margin-top:0}
+  .qrBox{width:40px;height:40px;border-radius:7px;padding:3px}
+  .qrText{display:none}
+}
+
+
+.assetActions{display:flex;gap:6px;align-items:center}
+.logoPageGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:7px}
+.logoPageGrid .check{justify-content:center;padding:7px 4px;font-size:11px}
+@media (max-width:768px){
+  .assetActions{gap:5px}
+  .logoPageGrid{grid-template-columns:repeat(5,1fr);gap:5px}
+  .logoPageGrid .check{font-size:10px;padding:7px 2px}
+}
+
+
+/* ===== Summary bottom QR + hashtag row ===== */
+.summaryBottom{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:12px;
+  width:100%;
+}
+.summaryBottom .hashtagArea{
+  flex:1 1 auto;
+  margin-top:0;
+  max-height:none;
+  overflow:visible;
+  gap:5px;
+}
+.summaryBottom .hashtagChip{
+  font-size:clamp(8px,1.12vw,10px);
+  padding:4px 7px;
+  line-height:1.15;
+  border:1px solid color-mix(in srgb, var(--theme-accent,#F5D97A) 45%, rgba(255,255,255,.18));
+}
+.summaryBottom .qrCta{
+  align-self:flex-end;
+}
+.slide.summary .slideMain{
+  padding-bottom:7.5%;
+}
+@media (max-width:768px){
+  .summaryBottom{gap:6px;margin-top:10px}
+  .summaryBottom .hashtagArea{gap:4px}
+  .summaryBottom .hashtagChip{font-size:9px;padding:3px 6px}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div>
+      <div class="badge">Mobile V5.0 · PNG 다운로드 안정화</div>
+      <h1>AI 검색 최적화 카드뉴스 빌더 · Mobile</h1>
+      <p class="desc">5장 카드뉴스 생성 · 로고/QR 적용 · GEO/AEO 진단 · PNG 일괄 다운로드</p>
+    </div>
+    <button class="secondary" onclick="resetAll()">초기화</button>
+  </div>
+
+  <div class="grid">
+    <section class="box">
+      <h2>01. 입력</h2>
+      <label>브랜드명</label>
+      <input id="brand" value="@innovway.io">
+
+      <label>브랜드 로고 업로드</label>
+      <div class="fileRow">
+        <span class="fileName" id="logoFileName">로고 없음 · 없으면 브랜드명이 표시됩니다</span>
+        <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="loadBrandLogo(this)">
+        <div class="assetActions">
+          <button class="secondary smallBtn" onclick="document.getElementById('logoInput').click()">업로드</button>
+          <button class="secondary smallBtn" onclick="clearBrandLogo()">삭제</button>
+        </div>
+      </div>
+      <label>로고 삽입 페이지</label>
+      <div class="logoPageGrid">
+        <label class="check"><input type="checkbox" class="logoPage" value="0" checked onchange="renderSlides()">1장</label>
+        <label class="check"><input type="checkbox" class="logoPage" value="1" checked onchange="renderSlides()">2장</label>
+        <label class="check"><input type="checkbox" class="logoPage" value="2" checked onchange="renderSlides()">3장</label>
+        <label class="check"><input type="checkbox" class="logoPage" value="3" checked onchange="renderSlides()">4장</label>
+        <label class="check"><input type="checkbox" class="logoPage" value="4" checked onchange="renderSlides()">5장</label>
+      </div>
+
+      <label>QR 코드 업로드</label>
+      <div class="fileRow">
+        <span class="fileName" id="qrFileName">QR 없음 · 있으면 마지막 카드 하단에 표시됩니다</span>
+        <input type="file" id="qrInput" accept="image/*" style="display:none" onchange="loadQrCode(this)">
+        <div class="assetActions">
+          <button class="secondary smallBtn" onclick="document.getElementById('qrInput').click()">업로드</button>
+          <button class="secondary smallBtn" onclick="clearQrCode()">삭제</button>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div><label>업종 / 주제</label><input id="category" placeholder="예: 사회적기업, 미용실, AI아트"></div>
+        <div><label>첫 장 라벨</label><input id="coverLabel" value="NEW POST"></div>
+      </div>
+
+      <label>카드 유형</label>
+      <select id="contentType">
+        <option value="insight">인사이트형</option>
+        <option value="info">정보전달형</option>
+        <option value="story">스토리텔링형</option>
+        <option value="news">뉴스요약형</option>
+        <option value="place">플레이스 마케팅형</option>
+      </select>
+
+      <label>톤</label>
+      <select id="tone">
+        <option value="consulting">컨설턴트형</option>
+        <option value="professional">전문적</option>
+        <option value="friendly">친근한</option>
+        <option value="news">뉴스형</option>
+        <option value="education">교육형</option>
+      </select>
+
+      <label>진단 옵션</label>
+      <div class="optionGrid">
+        <label class="check"><input type="checkbox" id="seoOpt" checked> SEO</label>
+        <label class="check"><input type="checkbox" id="geoOpt" checked> GEO</label>
+        <label class="check"><input type="checkbox" id="aeoOpt" checked> AEO</label>
+        <label class="check"><input type="checkbox" checked disabled> 5장 기본</label>
+      </div>
+
+      <label>이미지 활용 방식</label>
+      <div class="optionGrid">
+        <label class="check"><input type="radio" name="imgMode" id="imgAuto" checked> 자동 프롬프트</label>
+        <label class="check"><input type="radio" name="imgMode" id="imgExpert"> 전문가 수정</label>
+      </div>
+      <div class="modeNotice">현재 버전은 API 없이 카드별 이미지 프롬프트를 생성합니다. 생성한 이미지는 아래 업로드 영역에 넣으면 카드에 자동 반영됩니다.</div>
+
+      <label>원고 1</label><textarea id="doc1" placeholder="기사, 뉴스레터, 블로그, 플레이스 소개글, 보고서 등"></textarea>
+      <label>원고 2</label><textarea id="doc2" placeholder="추가 원고가 있으면 넣어주세요."></textarea>
+      <label>원고 3</label><textarea id="doc3" placeholder="추가 원고가 있으면 넣어주세요."></textarea>
+
+      <div class="btns">
+        <button onclick="generateAll()">분석 + 5장 생성</button>
+      </div>
+
+      <hr>
+      <h2>이미지 업로드</h2>
+      <div id="imageInputs"></div>
+
+      <hr>
+      <h2>카드별 이미지 프롬프트</h2>
+      <div id="imagePrompts"></div>
+      <div class="btns">
+        <button class="secondary" onclick="copyAllPrompts()">프롬프트 전체 복사</button>
+      </div>
+    </section>
+
+    <main class="box">
+      <h2>02. 미리보기 · 5장 카드뉴스</h2>
+      <div class="nav"><button class="secondary" onclick="moveSlide(-1)">← 이전</button><span id="counter">0 / 5</span><button class="secondary" onclick="moveSlide(1)">다음 →</button></div>
+      <div class="previewGrid">
+        <div class="viewer"><div class="cardCanvas" id="cardCanvas"><div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#657083;font-size:15px;line-height:1.7">원고를 입력하고<br>분석 + 5장 생성을 눌러주세요</div></div></div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+      <div class="btns">
+        <button onclick="downloadCurrent()">현재 카드 PNG</button>
+        <button class="green" onclick="downloadAllZip()">5장 PNG 일괄 다운로드</button>
+      </div>
+      <div class="small" id="downloadStatus" style="margin-top:8px;color:#9ca6b5"></div>
+      <hr>
+      <h2>카드 원고 편집</h2>
+      <p class="small">제목, 본문, 라벨, 강조어, 해시태그를 수정하면 미리보기에 바로 반영됩니다.</p>
+      <div id="cardEditor"></div>
+    </main>
+
+    <aside class="box">
+      <h2>03. SEO · GEO · AEO 진단</h2>
+      <div class="scoreGrid">
+        <div class="score"><span>SEO</span><b id="seoScore">0</b><div class="bar"><div class="fill" id="seoFill"></div></div></div>
+        <div class="score"><span>GEO</span><b id="geoScore">0</b><div class="bar"><div class="fill" id="geoFill"></div></div></div>
+        <div class="score"><span>AEO</span><b id="aeoScore">0</b><div class="bar"><div class="fill" id="aeoFill"></div></div></div>
+      </div>
+      <p class="small">GEO = Generative Engine Optimization. AI 이해도 · 인용도 · 재구성도 · 답변 활용도 기준입니다.</p>
+      <hr>
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('analysis',this)">분석</button>
+        <button class="tab" onclick="showTab('questions',this)">질문</button>
+      </div>
+      <div id="tab-analysis"><div id="analysisBox"></div><h2>자동 해시태그</h2><div class="tagrow" id="hashtags"></div></div>
+      <div id="tab-questions" style="display:none"><div id="questionList"></div></div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+let slides=[], current=0, images=[null,null,null,null,null], imgPrompts=[], lastReport='', themeAccent='#F5D97A', brandLogo=null, qrCode=null;
+
+
+
+function clearBrandLogo(){
+  brandLogo=null;
+  const input=document.getElementById('logoInput');
+  if(input) input.value='';
+  const name=document.getElementById('logoFileName');
+  if(name) name.textContent='로고 없음 · 없으면 브랜드명이 표시됩니다';
+  renderSlides();
+}
+function clearQrCode(){
+  qrCode=null;
+  const input=document.getElementById('qrInput');
+  if(input) input.value='';
+  const name=document.getElementById('qrFileName');
+  if(name) name.textContent='QR 없음 · 있으면 마지막 카드 하단에 표시됩니다';
+  renderSlides();
+}
+function shouldShowLogoOnPage(i){
+  const boxes=[...document.querySelectorAll('.logoPage')];
+  if(!boxes.length) return true;
+  return boxes.some(b=>b.checked && Number(b.value)===i);
+}
+
+function loadBrandLogo(input){
+  const file=input.files[0];
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    brandLogo=e.target.result;
+    const name=document.getElementById('logoFileName');
+    if(name) name.textContent=file.name;
+    renderSlides();
+  };
+  r.readAsDataURL(file);
+}
+function loadQrCode(input){
+  const file=input.files[0];
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    qrCode=e.target.result;
+    const name=document.getElementById('qrFileName');
+    if(name) name.textContent=file.name;
+    renderSlides();
+  };
+  r.readAsDataURL(file);
+}
+function brandAreaHtml(i){
+  if(brandLogo && shouldShowLogoOnPage(i)) return `<span class="brandMark"><img class="brandLogo" src="${brandLogo}" alt="brand logo"></span>`;
+  return `<span class="brandText">${brand.value||'@innovway.io'}</span>`;
+}
+
+function qrCtaHtml(i){
+  if(i!==4 || !qrCode) return '';
+  return `<div class="qrCta"><div class="qrBox"><img src="${qrCode}" alt="QR code"></div></div>`;
+}
+
+function getText(){return [doc1.value,doc2.value,doc3.value].filter(v=>v.trim()).join("\\n\\n");}
+function cleanText(t){return (t||'').replace(/\\s+/g,' ').trim();}
+function splitSentences(t){return cleanText(t).split(/(?<=[.!?。！？다요죠함음됨니다까])\\s+/).map(x=>x.trim()).filter(x=>x.length>6);}
+
+function normalizeWord(w){
+  return (w||'')
+    .replace(/[^\w가-힣._-]/g,'')
+    .replace(/(습니다|합니다|입니다|됩니다|드립니다|했어요|였어요|네요|어요|아요|죠|고요|더라고요|거든요|잖아요|니까|어서|해서)$/,'')
+    .trim();
+}
+function keywordList(t){
+  const stop=[
+    '그리고','하지만','그래서','있는','없는','합니다','습니다','입니다','됩니다','드립니다',
+    '좋습니다','높습니다','낮습니다','것은','것이','오늘','대한','위한','쉽게','말하면',
+    '통해','관련','중심','가장','질문','답변','내용','원고','기업','무엇','정말','왜',
+    '어떻게','있을까','필요할까','해야할까','될까','일까','합니다만','였습니다','하였습니다',
+    '먹고싶어서','말씀드렸더니','사장님께','친절하시고','좋았어요','감사했어요','있었습니다',
+    '있어서','같아요','너무','정말','많이','제가','저희','우리','이번','그때','바로'
+  ];
+  const arr=(t||'')
+    .replace(/[^가-힣A-Za-z0-9._\s]/g,' ')
+    .split(/\s+/)
+    .map(normalizeWord)
+    .filter(w=>w.length>1 && !stop.includes(w) && !/(습니다|합니다|입니다|됩니다|어요|아요|네요)$/.test(w));
+  const f={};
+  arr.forEach(w=>f[w]=(f[w]||0)+1);
+  return Object.entries(f).sort((a,b)=>b[1]-a[1]).map(x=>x[0]).slice(0,14);
+}
+function inferTopic(text,kws){
+  const t=text||'';
+  if(/신용등급|신용점수|대출금리|연체|카드값|금융/.test(t)) return '신용등급 관리';
+  if(/사회적기업|사회적 기업|사회적가치|공공구매|고용노동부/.test(t)) return '사회적기업';
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트|수박|망고|멜론|토마토|샤인머스캣|청포도/.test(t)) return '프리미엄 과일 선물';
+  if(/미용실|헤어|컷트|단발|펌|염색|볼륨매직|레이어드컷/.test(t)) return '헤어 스타일링';
+  if(/카페|디저트|베이커리|브런치|케이크|커피/.test(t)) return '카페 디저트';
+  if(/네일|발톱|문제성발톱|내성발톱/.test(t)) return '문제성 발톱 관리';
+  const filtered=(kws||[]).filter(k=>k.length<=10 && !/(습니다|합니다|입니다|됩니다|먹고싶어서|말씀드렸더니|친절하시고)/.test(k));
+  return filtered.slice(0,2).join(' · ') || '핵심 주제';
+}
+function safeTopic(topic){
+  let t=(topic||'').replace(/\s+/g,' ').trim();
+  t=t.replace(/(습니다|합니다|입니다|됩니다|먹고싶어서|말씀드렸더니|친절하시고|좋았어요|감사했어요)/g,'').trim();
+  if(t.length>18) t=t.slice(0,18).trim();
+  return t || '핵심 주제';
+}
+
+function uniq(arr){return [...new Set(arr.filter(Boolean))];}
+
+function analyze(){
+  const text=getText(), sents=splitSentences(text), kws=keywordList(text);
+  const topic=safeTopic(category.value.trim() || inferTopic(text,kws));
+  const core=findCoreClaim(sents,topic);
+  const audience=contentType.value==='place'?'선택 기준과 방문 이유가 필요한 잠재 고객':contentType.value==='news'?'이슈를 빠르게 이해하고 판단하려는 독자':'주제의 의미와 실행 포인트를 알고 싶은 독자';
+  const purpose=contentType.value==='place'?'문의·방문·예약으로 이어지도록 신뢰 근거 제공':'핵심 메시지를 이해하고 저장·공유·추가 탐색으로 연결';
+  return {text,sents,kws,topic,core,audience,purpose,brand:brand.value.trim()||'@innovway.io'};
+}
+function findCoreClaim(sents,topic){
+  const p=sents.filter(s=>/(다르|이유|핵심|중요|필요|가치|인증|목적|수익|문제|해결|지원)/.test(s));
+  return (p[0]||sents[0]||`${topic}의 핵심을 명확하게 정리해야 합니다.`).slice(0,120);
+}
+
+function makeHookQuestions(a){
+  const rawText=(a.topic+' '+a.text);
+  const t=safeTopic(a.topic);
+  let base=[
+    `${t}은 왜 지금 주목받을까?`,
+    `${t}을 선택하기 전 무엇을 봐야 할까?`,
+    `${t}의 만족도를 높이는 기준은?`,
+    `${t}은 무엇이 다를까?`,
+    `${t}을 잘 고르는 방법은?`,
+    `${t}에서 가장 많이 놓치는 것은?`,
+    `${t}의 핵심 기준은 무엇일까?`,
+    `${t}은 누구에게 도움이 될까?`
+  ];
+
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트|수박|망고|멜론|토마토|샤인머스캣|청포도/.test(rawText)){
+    base=[
+      '프리미엄 과일 선물은 왜 만족도가 높을까?',
+      '과일 선물세트는 어떤 기준으로 골라야 할까?',
+      '신선한 과일은 무엇이 다를까?',
+      '과일 선물에서 가장 중요한 기준은?',
+      '여러 과일을 한 번에 즐기려면 무엇을 봐야 할까?',
+      '과일 선물 포장이 중요한 이유는?',
+      '컵과일과 과일선물은 언제 선택하면 좋을까?',
+      '과일 선물 만족도를 높이는 요소는?',
+      '상견례나 집들이 과일선물은 어떻게 고를까?',
+      '프리미엄 과일을 고를 때 놓치기 쉬운 것은?'
+    ];
+  }
+
+  if(/신용등급|신용점수|대출금리|연체|카드값|금융/.test(rawText)){
+    base=[
+      '신용등급은 왜 중요한가?',
+      '신용점수가 떨어지면 무엇이 불리해질까?',
+      '신용등급을 올리려면 무엇부터 해야 할까?',
+      '신용점수 800점이면 좋은 점수일까?',
+      '연체는 신용등급에 얼마나 영향을 줄까?',
+      '대출금리는 신용등급에 따라 얼마나 달라질까?',
+      '신용등급보다 신용점수가 더 중요할까?',
+      '카드 사용은 신용점수에 도움이 될까?'
+    ];
+  }
+
+  if(/사회적기업|사회적 기업/.test(rawText)){
+    base=[
+      '돈도 벌고 사회도 살리는 기업이 있다?',
+      '사회적기업은 일반 기업과 무엇이 다를까?',
+      '사회적기업 인증은 정말 받을 가치가 있을까?',
+      '왜 정부는 사회적기업을 지원할까?',
+      '좋은 일을 하는 기업이면 모두 사회적기업일까?',
+      '사회적 가치와 수익은 함께 갈 수 있을까?',
+      '사회적기업이 필요한 진짜 이유는 무엇일까?',
+      '사회적기업은 누구에게 도움이 될까?',
+      '기업의 목적은 이윤만이어야 할까?',
+      '사회적기업을 평가할 때 무엇을 봐야 할까?'
+    ];
+  }
+
+  if(contentType.value==='place'){
+    base=[
+      `${t}을 고를 때 가장 먼저 봐야 할 것은?`,
+      `좋은 ${t}은 무엇이 다를까?`,
+      `${t} 선택 전 꼭 확인할 기준은?`,
+      `${a.brand}를 선택해야 하는 이유는?`,
+      `처음 방문해도 괜찮은 ${t}은 어떻게 찾을까?`,
+      `${t} 후회하지 않으려면 무엇을 봐야 할까?`,
+      `${t} 추천 기준은 무엇일까?`
+    ];
+  }
+
+  return uniq(base)
+    .map(q=>q.replace(/\s+/g,' ').trim())
+    .filter(q=>q.length<=34 && !/(먹고싶어서|말씀드렸더니|친절하시고|정말 행복|감사했어요|있었습니다)/.test(q))
+    .map((q,i)=>({q,score:96-(i*3)}))
+    .slice(0,10);
+}
+
+function buildCards(a,qs){
+  const cards=[
+    {role:'커버',label:coverLabel.value||'NEW POST',title:qs[0]?.q||`${a.topic}의 핵심은 무엇일까?`,body:[makeOneLineHook(a)]},
+    {role:'Q1',label:'QUESTION 1',title:qs[1]?.q||`${a.topic}은 무엇이 다를까?`,body:[makeDefinition(a),a.sents[1]||'핵심은 개념을 명확하게 정의하고 비교 기준을 제시하는 것입니다.']},
+    {role:'Q2',label:'QUESTION 2',title:qs[2]?.q||`${a.topic}은 왜 중요할까?`,body:[makeReason(a),a.sents[2]||'AI가 이해하기 쉬운 콘텐츠는 주장, 근거, 예시가 함께 있어야 합니다.']},
+    {role:'Q3',label:'QUESTION 3',title:qs[3]?.q||`${a.topic}을 어떻게 판단해야 할까?`,body:[makeEvidence(a),a.sents[3]||'모호한 표현보다 독립적으로 인용 가능한 문장이 필요합니다.']},
+    {role:'마무리',label:'SUMMARY',title:makeClosingTitle(a),body:[makeClosingBody(a)],tags:makeTags(a).slice(0,6)}
+  ];
+  return cards.map(c=>({...c,highlight:pickHighlight(c.title,a)}));
+}
+function makeOneLineHook(a){
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) return '신선도, 구성, 포장, 친절한 응대가 과일 선물 만족도를 만듭니다.';
+  return /사회적기업|사회적 기업/.test(a.topic+a.text)?'사회적 목적과 수익 창출을 동시에 추구하는 기업 이야기입니다.':`${a.topic}을 AI가 이해하고 답변에 활용할 수 있도록 질문 중심으로 재구성합니다.`;
+}
+function makeDefinition(a){
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) return '프리미엄 과일 선물은 신선도와 구성, 포장 완성도가 함께 좋아야 만족도가 높습니다.';
+  return /사회적기업|사회적 기업/.test(a.topic+a.text)?'사회적기업은 사회적 목적과 영리활동을 함께 수행하는 기업입니다.':`${a.topic}은 단순 키워드가 아니라 독자가 궁금해하는 질문과 답으로 정리되어야 합니다.`;
+}
+function makeReason(a){
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) return '과일은 맛뿐 아니라 받는 순간의 상태, 포장, 요청 반영 여부가 경험을 좌우합니다.';
+  return /사회적기업|사회적 기업/.test(a.topic+a.text)?'일반 기업이 이윤 창출을 우선한다면, 사회적기업은 공익성과 지속가능성을 함께 봅니다.':'생성형 AI는 정의, 비교, 근거, 사례가 있는 문장을 더 쉽게 이해하고 재구성합니다.';
+}
+function makeEvidence(a){
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) return '구성의 다양성, 과일 상태, 선물 포장, 상담 응대가 실제 후기에서 반복되는 핵심 근거입니다.';
+  return /사회적기업|사회적 기업/.test(a.topic+a.text)?'취약계층 고용, 사회서비스 제공, 지역사회 기여처럼 측정 가능한 근거가 중요합니다.':'좋은 콘텐츠는 한 문단만 떼어내도 답변으로 활용 가능한 독립성을 가져야 합니다.';
+}
+function makeClosingTitle(a){
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) return '과일 선물은 신선함과 정성이 결정한다';
+  return /사회적기업|사회적 기업/.test(a.topic+a.text)?'사회적 가치와 수익은 함께 만들 수 있다':'검색되는 콘텐츠는 질문에서 시작된다';
+}
+function makeClosingBody(a){
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) return '좋은 과일 선물은 맛, 구성, 포장, 응대가 함께 완성될 때 기억에 남습니다.';
+  return /사회적기업|사회적 기업/.test(a.topic+a.text)?'핵심은 좋은 의도가 아니라, 지속 가능한 구조와 명확한 근거입니다.':'SEO는 찾게 만들고, AEO는 답하게 만들며, GEO는 AI가 이해하고 재구성하게 만듭니다.';
+}
+
+function brandToHashtag(brandText){
+  const b=(brandText||'').trim();
+  if(!b) return '';
+  if(b.startsWith('@')) return '#'+b.slice(1).replace(/[^가-힣A-Za-z0-9._-]/g,'');
+  if(b.startsWith('#')) return '#'+b.slice(1).replace(/[^가-힣A-Za-z0-9._-]/g,'');
+  return '#'+b.replace(/[^가-힣A-Za-z0-9._-]/g,'');
+}
+
+function makeTags(a){
+  const tags=[]; if(a.brand) tags.push(brandToHashtag(a.brand)); if(a.topic) tags.push('#'+a.topic.replace(/[^가-힣A-Za-z0-9]/g,''));
+  if(/과일|컵과일|과일선물|과일 선물|과일도시락|프리미엄 과일|과일세트/.test(a.topic+a.text)) tags.push('#프리미엄과일','#과일선물','#컵과일','#과일도시락','#신선한과일');
+  if(/사회적기업|사회적 기업/.test(a.topic+a.text)) tags.push('#사회적기업','#사회적가치','#공공','#고용노동부','#사회적경제');
+  a.kws.slice(0,6).forEach(k=>tags.push('#'+k.replace(/[^가-힣A-Za-z0-9]/g,'')));
+  return uniq(tags).slice(0,8);
+}
+function buildImagePrompts(a){
+  const base='Create only one single 4:5 vertical image. Do not create a collage. Do not split the frame. No panels, no grid, no multiple scenes. premium editorial Instagram carousel background, realistic but minimal, dark elegant tone, strong negative space, no text, no logo, Korean business magazine style';
+  if(/사회적기업|사회적 기업/.test(a.topic+a.text)){
+    return [
+      `사회적 가치와 수익 창출을 동시에 상징하는 비즈니스와 커뮤니티 장면, ${base}`,
+      `일반기업과 사회적기업의 차이를 암시하는 두 갈래 비즈니스 길, people and purpose, ${base}`,
+      `사회적기업 인증과 공공 신뢰를 상징하는 문서, 도장, 회의 장면, ${base}`,
+      `정부 지원, 취약계층 고용, 지역사회 기여를 상징하는 현실적인 다큐멘터리 장면, ${base}`,
+      `지속가능한 성장과 사회적 가치를 함께 표현한 고급 브랜드 포스터 배경, ${base}`
+    ];
+  }
+  return [
+    `${a.topic}의 핵심 질문을 표현하는 상징적인 메인 비주얼, ${base}`,
+    `${a.topic}의 정의와 비교를 보여주는 미니멀 비즈니스 에디토리얼 장면, ${base}`,
+    `${a.topic}의 필요성과 이유를 보여주는 현실적인 사례 중심 이미지, ${base}`,
+    `${a.topic}의 판단 기준과 근거를 시각화한 세련된 배경 이미지, ${base}`,
+    `${a.topic}의 결론과 행동 유도를 담은 프리미엄 마무리 포스터 배경, ${base}`
+  ];
+}
+function scoreAll(a,qs){
+  let seo=50,geo=50,aeo=50;
+  if(seoOpt.checked){seo+=a.kws.length>=6?22:12;seo+=a.topic?13:0;seo+=qs.length>=8?10:0}
+  if(geoOpt.checked){const t=a.text;geo+=(/(정의|이유|예시|비교|결론|핵심|근거|대표)/.test(t)?14:6)+(a.core.length>35?12:6)+(/(이다|입니다|한다|합니다|의미|구분|기준)/.test(t)?12:5)+(/(예로|대표|인증|지원|고용|서비스|수익|목적|사례)/.test(t)?12:5)+(a.sents.length>=5?10:4)}
+  if(aeoOpt.checked){aeo+=qs.length>=5?18:8;aeo+=/\\?/.test(qs.map(x=>x.q).join(' '))?12:0;aeo+=a.core.length>30?12:5;aeo+=a.sents.length>=4?8:3}
+  return {seo:Math.min(100,seo),geo:Math.min(100,geo),aeo:Math.min(100,aeo)}
+}
+function issues(a,scores){
+  const arr=[]; if(scores.seo<80) arr.push('대표 키워드, 연관 키워드, 검색 의도를 더 분명하게 분리하세요.');
+  if(scores.geo<80) arr.push('GEO 보완: 정의·비교·근거·사례 문장을 늘려 AI가 인용하기 쉽게 만드세요.');
+  if(scores.aeo<80) arr.push('AEO 보완: 실제 사용자가 묻는 질문과 바로 답하는 문장을 추가하세요.');
+  if(a.sents.length<5) arr.push('여러 원고를 더 넣으면 핵심 주장과 질문 생성 품질이 좋아집니다.');
+  if(!arr.length) arr.push('기본 구조가 좋습니다. 최신 사례와 수치 근거를 추가하면 더 강해집니다.');
+  return arr;
+}
+function smartBreak(title,role){
+  title=(title||'').replace(/\\s+/g,' ').trim(); const chunks=[]; if(title.length<=9)return title;
+  const words=title.split(' ');
+  if(words.length>=3){let line='',max=role==='커버'?12:13;words.forEach(w=>{if((line+' '+w).trim().length>max){chunks.push(line.trim());line=w}else line=(line+' '+w).trim()});if(line)chunks.push(line);return chunks.slice(0,4).join('<br>')}
+  const max=role==='커버'?11:12; for(let i=0;i<title.length;i+=max)chunks.push(title.slice(i,i+max)); return chunks.slice(0,4).join('<br>');
+}
+
+function selectThemeAccent(a){
+  const text=(a.topic+' '+a.text).toLowerCase();
+  if(/ai|인공지능|디지털|마케팅|콘텐츠|자동화|검색|seo|geo|aeo|dx/.test(text)) return '#7CE2B2';
+  if(/카페|디저트|베이커리|파스타|음식|푸드|과일|맛집|브런치|선물/.test(text)) return '#FFB36B';
+  if(/미용|헤어|네일|뷰티|피부|왁싱|펌|컷|염색/.test(text)) return '#F0A6C1';
+  if(/병원|의원|헬스|케어|치료|건강|의료|한의원/.test(text)) return '#7DB7FF';
+  if(/사회적기업|사회적 기업|공공|정책|정부|지원|인증|고용|교육|컨설팅|비즈니스/.test(text)) return '#F5D97A';
+  return '#F5D97A';
+}
+function pickHighlight(title,a){
+  const candidates=[];
+  const raw=(title||'').replace(/[?？!！.,]/g,'');
+  const text=(a.topic+' '+a.text+' '+raw);
+  const preferred=[
+    '사회적 가치','일반 기업','사회적기업','인증','지원','수익','가치',
+    'AI','검색','콘텐츠','자동화','전략','질문','답변',
+    '프리미엄 과일','과일 선물','과일선물','신선한 과일','신선도','포장','디저트','카페','생크림','수제','예약',
+    '미용실','헤어','단발펌','여성컷','볼륨매직'
+  ];
+  preferred.forEach(w=>{ if(raw.includes(w)) candidates.push(w); });
+  (a.kws||[]).forEach(w=>{ if(raw.includes(w)) candidates.push(w); });
+  // fallback: choose meaningful longest word from title
+  raw.split(/\s+/).forEach(w=>{
+    if(w.length>=2 && !/(왜|정말|무엇이|무엇을|있다|일까|받을|함께|만들|수|은|는|이|가|을|를|과|와)$/.test(w)) candidates.push(w);
+  });
+  const uniqs=[...new Set(candidates)].sort((x,y)=>y.length-x.length);
+  return uniqs[0] || '';
+}
+function escapeRegExp(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function applyHighlightToTitle(title,highlight){
+  const htmlTitle=smartBreak(title,'').replace(/\n/g,'<br>');
+  if(!highlight) return htmlTitle;
+  const reg=new RegExp(escapeRegExp(highlight),'');
+  return htmlTitle.replace(reg,`<span class="hl">${highlight}</span>`);
+}
+
+function generateAll(){
+  if(!getText().trim()){alert('원고를 입력해주세요.');return}
+  const a=analyze(), qs=makeHookQuestions(a), scores=scoreAll(a,qs), issueList=issues(a,scores);
+  themeAccent=selectThemeAccent(a);
+  document.documentElement.style.setProperty('--theme-accent',themeAccent);
+  slides=buildCards(a,qs); imgPrompts=buildImagePrompts(a); current=0;
+  renderAll(a,qs,scores,issueList); buildImageInputs(); buildPromptInputs(); renderSlides();
+}
+function renderAll(a,qs,scores,issueList){
+  setScore('seo',scores.seo); setScore('geo',scores.geo); setScore('aeo',scores.aeo);
+  analysisBox.innerHTML=`<div class="kv"><b>핵심주장</b><span>${a.core}</span></div><div class="kv"><b>주제</b><span>${a.topic}</span></div><div class="kv"><b>독자</b><span>${a.audience}</span></div><div class="kv"><b>목표</b><span>${a.purpose}</span></div><div class="kv"><b>카드구조</b><span>커버 · Q1 · Q2 · Q3 · 마무리</span></div><div class="kv"><b>GEO기준</b><span>AI 이해도 · 인용도 · 재구성도 · 답변 활용도</span></div><div class="kv"><b>포인트색</b><span><span class="accentInfo"><span class="accentSwatch"></span>${themeAccent}</span></span></div>`;
+  questionList.innerHTML=qs.map((x,i)=>`<div class="qItem"><strong>${i+1}. ${x.q}</strong><em>후킹/검색질문 적합도 ${x.score}점</em></div>`).join('');
+  if(document.getElementById('issues')) issues.innerHTML=issueList.map(x=>`<div class="issue">${x}</div>`).join('');
+  const tags=makeTags(a); hashtags.innerHTML=tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  lastReport=makeAnswerText(a,qs,tags,scores,issueList); if(document.getElementById('answerOutput')) answerOutput.textContent=lastReport;
+  buildCardEditor();
+}
+function makeAnswerText(a,qs,tags,scores,issueList){
+ return `[AI 검색 대응 요약]\\n브랜드: ${a.brand}\\n주제: ${a.topic}\\n핵심주장: ${a.core}\\n\\n[핵심 질문]\\n${qs.slice(0,5).map((x,i)=>`${i+1}. ${x.q}`).join('\\n')}\\n\\n[AI 답변형 문장]\\nQ. ${qs[0]?.q||'핵심 질문은 무엇인가요?'}\\nA. ${makeDefinition(a)} ${makeReason(a)}\\n\\n[포인트 컬러]\\n${themeAccent}\\n\\n[강조 키워드]\\n${slides.map((s,i)=>`${i+1}장: ${s.highlight||'-'}`).join('\\n')}\\n\\n[진단]\\nSEO ${scores.seo}\\nGEO ${scores.geo} : AI 이해도 · 인용도 · 재구성도 · 답변 활용도 기준\\nAEO ${scores.aeo}\\n\\n[보완]\\n${issueList.map(x=>'- '+x).join('\\n')}\\n\\n[해시태그]\\n${tags.join(' ')}`;
+}
+
+function buildCardEditor(){
+  const target=document.getElementById('cardEditor');
+  if(!target) return;
+  target.innerHTML='';
+  if(!slides.length){
+    target.innerHTML='<p class="small">생성 후 편집 영역이 표시됩니다.</p>';
+    return;
+  }
+  slides.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='editCard';
+    div.innerHTML=`
+      <h3>${i+1}장 · ${s.role}</h3>
+      <div class="meta">
+        <div>
+          <label>라벨</label>
+          <input value="${s.label||''}" oninput="updateSlide(${i},'label',this.value)">
+        </div>
+        <div>
+          <label>강조어</label>
+          <input value="${s.highlight||''}" oninput="updateSlide(${i},'highlight',this.value)">
+        </div>
+      </div>
+      <label>제목</label>
+      <textarea oninput="updateSlide(${i},'title',this.value)">${s.title||''}</textarea>
+      <label>본문</label>
+      <textarea class="bodyEdit" oninput="updateSlide(${i},'bodyText',this.value)">${(s.body||[]).join('\n')}</textarea>
+      ${s.tags?`<label>해시태그</label><textarea oninput="updateSlide(${i},'tagsText',this.value)">${s.tags.join(' ')}</textarea>`:''}
+    `;
+    target.appendChild(div);
+  });
+}
+function updateSlide(i,key,val){
+  if(!slides[i]) return;
+  if(key==='bodyText') slides[i].body=val.split('\n').map(x=>x.trim()).filter(Boolean);
+  else if(key==='tagsText') slides[i].tags=val.split(/\s+/).map(x=>x.trim()).filter(Boolean);
+  else slides[i][key]=val;
+  renderSlides();
+}
+
+function renderSlides(){
+  cardCanvas.innerHTML=''; thumbs.innerHTML='';
+  slides.forEach((s,i)=>{
+    const bgClass=(i===0||i===4)?'fallback1':'fallback2';
+    const slide=document.createElement('div'); slide.className='slide '+(s.role==='마무리'?'summary ':'')+(i===current?'active':'');
+    slide.innerHTML=`<div class="slideBg ${images[i]?'':' '+bgClass}" style="${images[i]?'background-image:url('+images[i]+')':''}"></div><div class="slideOverlay"></div><div class="slideInner"><div class="slideTop"><span>${i+1} / 5</span>${brandAreaHtml(i)}</div><div class="slideMain"><div class="pill">${s.label}</div><div class="title ${s.role==='커버'?'cover':''}">${applyHighlightToTitle(s.title,s.highlight)}</div><div class="body">${s.body.slice(0,2).map(p=>`<p>${p}</p>`).join('')}</div>${s.tags?`<div class="summaryBottom"><div class="hashtagArea">${s.tags.map(t=>`<span class="hashtagChip">${t}</span>`).join('')}</div>${qrCtaHtml(i)}</div>`:qrCtaHtml(i)}</div></div>`;
+    cardCanvas.appendChild(slide);
+    const th=document.createElement('div'); th.className='thumb '+(i===current?'active':''); th.onclick=()=>{current=i;renderSlides()};
+    th.innerHTML=`<div class="slideBg ${images[i]?'':' '+bgClass}" style="${images[i]?'background-image:url('+images[i]+')':''}"></div><span>${s.role}</span>`; thumbs.appendChild(th);
+  });
+  counter.textContent=slides.length?`${current+1} / 5`:'0 / 5';
+}
+function buildImageInputs(){
+  imageInputs.innerHTML='';
+  for(let i=0;i<5;i++){const row=document.createElement('div');row.className='fileRow';row.innerHTML=`<span class="fileName" id="fileName${i}">${i+1}장 ${slides[i]?.role||''}: 이미지 없음</span><input type="file" id="img${i}" accept="image/*" style="display:none" onchange="loadImage(${i},this)"><button class="secondary smallBtn" onclick="document.getElementById('img${i}').click()">업로드</button>`;imageInputs.appendChild(row)}
+}
+function buildPromptInputs(){
+  imagePrompts.innerHTML='';
+  imgPrompts.forEach((p,i)=>{
+    const div=document.createElement('div'); div.className='promptBox';
+    div.innerHTML=`<div class="promptTop"><label>${i+1}장 ${slides[i]?.role||''} 프롬프트</label><button class="secondary smallBtn" onclick="copyPrompt(${i})">복사</button></div><textarea id="prompt${i}" ${imgAuto.checked?'readonly':''} oninput="imgPrompts[${i}]=this.value">${p}</textarea>`;
+    imagePrompts.appendChild(div);
+  });
+}
+function loadImage(i,input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{images[i]=e.target.result;document.getElementById('fileName'+i).textContent=`${i+1}장: ${file.name}`;renderSlides()};r.readAsDataURL(file)}
+function copyPrompt(i){navigator.clipboard.writeText(document.getElementById('prompt'+i).value);alert((i+1)+'장 프롬프트가 복사되었습니다.')}
+function copyAllPrompts(){if(!imgPrompts.length){alert('먼저 생성해주세요.');return}navigator.clipboard.writeText(imgPrompts.map((p,i)=>`${i+1}장\\n${document.getElementById('prompt'+i)?.value||p}`).join('\\n\\n'));alert('전체 프롬프트가 복사되었습니다.')}
+function moveSlide(d){if(!slides.length)return;current=Math.max(0,Math.min(4,current+d));renderSlides()}
+function setScore(id,val){document.getElementById(id+'Score').textContent=val;const f=document.getElementById(id+'Fill');f.style.width=val+'%';f.style.background=val>=80?'#4ade80':val>=60?'#facc15':'#fb7185'}
+
+
+function safeDownloadBlob(blob, filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},500);
+}
+
+
+
+function setDownloadStatus(msg){
+  const el=document.getElementById('downloadStatus');
+  if(el) el.textContent=msg || '';
+}
+function safeDownloadBlob(blob, filename){
+  if(!blob){
+    alert('다운로드 파일 생성에 실패했습니다.');
+    return;
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},800);
+}
+async function waitForCardImages(){
+  const imgs=[...cardCanvas.querySelectorAll('img')];
+  await Promise.all(imgs.map(img=>{
+    if(img.complete) return Promise.resolve();
+    return new Promise(resolve=>{
+      img.onload=resolve;
+      img.onerror=resolve;
+      setTimeout(resolve,1200);
+    });
+  }));
+}
+function crc32FromUint8(data){
+  let c=0xffffffff;
+  for(let i=0;i<data.length;i++){
+    c^=data[i];
+    for(let k=0;k<8;k++) c=(c>>>1)^(0xedb88320 & -(c&1));
+  }
+  return (c^0xffffffff)>>>0;
+}
+function strToU8(s){return new TextEncoder().encode(s);}
+function u32(n){const b=new Uint8Array(4);b[0]=n&255;b[1]=(n>>>8)&255;b[2]=(n>>>16)&255;b[3]=(n>>>24)&255;return b;}
+function u16(n){const b=new Uint8Array(2);b[0]=n&255;b[1]=(n>>>8)&255;return b;}
+function concatU8(parts){
+  const len=parts.reduce((s,p)=>s+p.length,0);
+  const out=new Uint8Array(len);
+  let off=0;
+  parts.forEach(p=>{out.set(p,off);off+=p.length;});
+  return out;
+}
+function dosDateTime(){
+  const d=new Date();
+  const time=((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|((Math.floor(d.getSeconds()/2))&31);
+  const date=(((d.getFullYear()-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31);
+  return {time,date};
+}
+function dataUrlToUint8(dataUrl){
+  const base64=dataUrl.split(',')[1];
+  const bin=atob(base64);
+  const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return arr;
+}
+function makeZipBlob(files){
+  const localParts=[], centralParts=[];
+  let offset=0;
+  const dt=dosDateTime();
+  files.forEach(file=>{
+    const nameBytes=strToU8(file.name);
+    const data=file.data;
+    const crc=crc32FromUint8(data);
+    const local=concatU8([
+      u32(0x04034b50),u16(20),u16(0),u16(0),u16(dt.time),u16(dt.date),
+      u32(crc),u32(data.length),u32(data.length),u16(nameBytes.length),u16(0),
+      nameBytes,data
+    ]);
+    localParts.push(local);
+    const central=concatU8([
+      u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(dt.time),u16(dt.date),
+      u32(crc),u32(data.length),u32(data.length),u16(nameBytes.length),u16(0),u16(0),
+      u16(0),u16(0),u32(0),u32(offset),nameBytes
+    ]);
+    centralParts.push(central);
+    offset+=local.length;
+  });
+  const centralSize=centralParts.reduce((s,p)=>s+p.length,0);
+  const end=concatU8([
+    u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),
+    u32(centralSize),u32(offset),u16(0)
+  ]);
+  return new Blob([...localParts,...centralParts,end],{type:'application/zip'});
+}
+
+
+function setDownloadStatus(msg){
+  const el=document.getElementById('downloadStatus');
+  if(el) el.textContent=msg || '';
+}
+function triggerDataUrlDownload(dataUrl, filename){
+  const a=document.createElement('a');
+  a.href=dataUrl;
+  a.download=filename;
+  a.rel='noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>a.remove(),300);
+}
+async function waitForCardImages(){
+  const imgs=[...document.getElementById('cardCanvas').querySelectorAll('img')];
+  await Promise.all(imgs.map(img=>{
+    if(img.complete) return Promise.resolve();
+    return new Promise(resolve=>{
+      img.onload=resolve;
+      img.onerror=resolve;
+      setTimeout(resolve,1000);
+    });
+  }));
+}
+
+async function captureSlide(index){
+  const old=current;
+  current=index;
+  renderSlides();
+  await new Promise(r=>setTimeout(r,220));
+  await waitForCardImages();
+
+  const target=document.getElementById('cardCanvas');
+  if(typeof html2canvas==='undefined'){
+    alert('이미지 저장 기능을 불러오지 못했습니다. 인터넷 연결 후 새로고침해주세요.');
+    throw new Error('html2canvas is not loaded');
+  }
+
+  const canvas=await html2canvas(target,{
+    backgroundColor:null,
+    scale:2,
+    useCORS:true,
+    allowTaint:true,
+    logging:false
+  });
+
+  current=old;
+  renderSlides();
+  return canvas;
+}
+async function downloadCurrent(){
+  if(!slides.length){alert('먼저 생성해주세요.');return}
+  try{
+    setDownloadStatus('현재 카드 PNG 생성 중...');
+    const canvas=await captureSlide(current);
+    triggerDataUrlDownload(canvas.toDataURL('image/png'), `card${String(current+1).padStart(2,'0')}.png`);
+    setDownloadStatus('현재 카드 PNG 다운로드를 시작했습니다.');
+  }catch(e){
+    console.error(e);
+    setDownloadStatus('');
+    alert('현재 카드 PNG 다운로드가 되지 않습니다. 브라우저 다운로드 허용 여부를 확인해주세요.');
+  }
+}
+async function downloadAllZip(){
+  if(!slides.length){alert('먼저 생성해주세요.');return}
+  try{
+    setDownloadStatus('5장 PNG 일괄 다운로드 중...');
+    for(let i=0;i<5;i++){
+      setDownloadStatus(`${i+1}/5 카드 다운로드 중...`);
+      const canvas=await captureSlide(i);
+      triggerDataUrlDownload(canvas.toDataURL('image/png'), `card${String(i+1).padStart(2,'0')}.png`);
+      await new Promise(r=>setTimeout(r,900));
+    }
+    setDownloadStatus('5장 PNG 다운로드를 시작했습니다.');
+  }catch(e){
+    console.error(e);
+    setDownloadStatus('');
+    alert('5장 PNG 일괄 다운로드가 되지 않습니다. 브라우저에서 여러 파일 다운로드 허용을 확인해주세요.');
+  }
+}
+function downloadReport(){if(!lastReport){alert('먼저 생성해주세요.');return}const extra='\\n\\n[이미지 프롬프트]\\n'+imgPrompts.map((p,i)=>`${i+1}장 ${slides[i]?.role||''}\\n${document.getElementById('prompt'+i)?.value||p}`).join('\\n\\n');const blob=new Blob([lastReport+extra],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SEO_GEO_AEO_report.txt';a.click()}
+function showTab(name,btn){['analysis','questions','checks'].forEach(n=>{const el=document.getElementById('tab-'+n); if(el) el.style.display=n===name?'block':'none';});document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active')}
+function resetAll(){doc1.value='';doc2.value='';doc3.value='';category.value='';brand.value='@innovway.io';slides=[];current=0;images=[null,null,null,null,null];imgPrompts=[];lastReport='';themeAccent='#F5D97A';brandLogo=null;qrCode=null;const li=document.getElementById('logoInput'); if(li) li.value=''; const qi=document.getElementById('qrInput'); if(qi) qi.value='';document.documentElement.style.setProperty('--theme-accent',themeAccent);cardCanvas.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#657083;font-size:15px;line-height:1.7">원고를 입력하고<br>분석 + 5장 생성을 눌러주세요</div>';thumbs.innerHTML='';analysisBox.innerHTML='';questionList.innerHTML='';if(document.getElementById('issues')) issues.innerHTML='';hashtags.innerHTML='';if(document.getElementById('answerOutput')) answerOutput.textContent='생성 후 표시됩니다.';if(document.getElementById('cardEditor')) cardEditor.innerHTML='';imagePrompts.innerHTML='';if(document.getElementById('logoFileName')) logoFileName.textContent='로고 없음 · 없으면 브랜드명이 표시됩니다';if(document.getElementById('qrFileName')) qrFileName.textContent='QR 없음 · 있으면 마지막 카드 하단에 표시됩니다';document.querySelectorAll('.logoPage').forEach(b=>b.checked=true);setScore('seo',0);setScore('geo',0);setScore('aeo',0);counter.textContent='0 / 5';buildImageInputs()}
+function loadSample(){brand.value='@innovway.io';category.value='사회적기업';contentType.value='insight';tone.value='consulting';doc1.value='사회적기업은 사회적 목적과 영리활동을 동시에 수행하는 기업으로서 고용노동부 장관의 인증을 받은 기업을 말합니다. 쉽게 말하면 일반기업이 이윤 창출 중심 비영리단체가 공익활동 중심이라면 사회적기업은 수익성과 사회적가치를 동시에 추구합니다.';doc2.value='사회적기업은 취약계층 고용, 사회서비스 제공, 지역사회 공헌처럼 사회문제 해결을 목표로 합니다. 단순히 좋은 일을 하는 기업이 아니라 지속 가능한 비즈니스 구조 안에서 사회적 가치를 만들어야 합니다.';doc3.value='사회적기업 인증은 공공구매, 지원사업, 신뢰 형성 측면에서 장점이 있지만 인증 자체보다 중요한 것은 사회적 목적, 수익 모델, 운영 지속가능성을 함께 갖추는 것입니다.';generateAll()}
+document.addEventListener('change',e=>{if(e.target.name==='imgMode'&&imgPrompts.length)buildPromptInputs()});
+buildImageInputs();
+</script>
+</body>
+</html>
