@@ -3,556 +3,285 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 메뉴 사진 만들기 가이드</title>
+<title>Innovway AI Tools</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-    background: #F7F8FA;
-    color: #1A1A2E;
-    line-height: 1.7;
-    padding: 0 0 60px 0;
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #1c1c1e;
+    min-height: 100vh;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 20px;
   }
 
-  .hero {
-    background: linear-gradient(135deg, #1A1A2E 0%, #16213E 60%, #0F3460 100%);
-    color: white;
-    padding: 48px 24px 40px;
-    text-align: center;
+  .container { max-width: 480px; width: 100%; }
+
+  .header { text-align: center; margin-bottom: 48px; }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -1px;
+    line-height: 1;
   }
 
-  .hero .badge {
-    display: inline-block;
-    background: #E94560;
-    color: white;
+  .logo-text span { color: #c0112f; }
+
+  .logo-sub {
     font-size: 12px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 20px;
-    margin-bottom: 16px;
-    letter-spacing: 1px;
+    color: #636366;
+    letter-spacing: 3px;
+    margin-top: 6px;
   }
 
-  .hero h1 {
-    font-size: 26px;
-    font-weight: 800;
-    line-height: 1.35;
-    margin-bottom: 12px;
-  }
-
-  .hero h1 span {
-    color: #E94560;
-  }
-
-  .hero p {
-    font-size: 14px;
-    color: rgba(255,255,255,0.7);
-  }
-
-  .container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 0 16px;
-  }
-
-  .steps-wrap {
-    margin-top: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .step-card {
-    background: white;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  }
-
-  .step-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 20px;
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .step-num {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #1A1A2E;
-    color: white;
-    font-size: 14px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .step-card.active .step-num {
-    background: #E94560;
-  }
-
-  .step-title-wrap {
-    flex: 1;
-  }
-
-  .step-label {
-    font-size: 11px;
-    color: #999;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-  }
-
-  .step-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #1A1A2E;
-  }
-
-  .step-arrow {
-    font-size: 18px;
-    color: #ccc;
-    transition: transform 0.25s;
-  }
-
-  .step-card.active .step-arrow {
-    transform: rotate(180deg);
-    color: #E94560;
-  }
-
-  .step-body {
-    display: none;
-    padding: 0 20px 20px;
-    border-top: 1px solid #F0F0F0;
-  }
-
-  .step-card.active .step-body {
-    display: block;
-  }
-
-  .step-desc {
+  .header-desc {
+    margin-top: 20px;
     font-size: 13px;
-    color: #555;
-    margin: 14px 0 16px;
-    line-height: 1.7;
-  }
-
-  /* 프롬프트 박스 */
-  .prompt-box {
-    background: #F7F8FA;
-    border: 1.5px solid #E8E8F0;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    position: relative;
-  }
-
-  .prompt-tag {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    color: #E94560;
-    background: #FFF0F3;
-    border-radius: 6px;
-    padding: 2px 8px;
-    margin-bottom: 10px;
-    letter-spacing: 0.5px;
-  }
-
-  .prompt-text {
-    font-size: 13px;
-    color: #333;
+    color: #aeaeb2;
+    font-weight: 300;
     line-height: 1.8;
-    white-space: pre-wrap;
-    word-break: break-all;
   }
 
-  .copy-btn {
+  .divider {
+    border: none;
+    border-top: 1px solid #2c2c2e;
+    margin: 36px 0 24px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #48484a;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .link-card {
+    display: flex;
+    align-items: center;
+    background: #2c2c2e;
+    border: 1px solid #3a3a3c;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.2s ease;
+  }
+
+  .link-card:hover {
+    background: #3a3a3c;
+    border-color: #48484a;
+    transform: translateY(-2px);
+  }
+
+  .link-card.coming {
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    width: 100%;
-    margin-top: 10px;
-    padding: 10px;
-    background: #1A1A2E;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.2s;
-    -webkit-tap-highlight-color: transparent;
+    margin-right: 16px;
+    flex-shrink: 0;
+    overflow: hidden;
   }
 
-  .copy-btn:active {
-    background: #E94560;
-  }
+  .card-text { flex: 1; }
 
-  .copy-btn.copied {
-    background: #2ECC71;
-  }
-
-  /* 팁 박스 */
-  .tip-box {
-    background: #FFF9F0;
-    border-left: 3px solid #F39C12;
-    border-radius: 0 8px 8px 0;
-    padding: 12px 14px;
-    font-size: 13px;
-    color: #555;
-    margin-top: 14px;
-    line-height: 1.7;
-  }
-
-  .tip-box strong {
-    color: #E67E22;
-    display: block;
+  .card-category {
+    font-size: 10px;
+    font-weight: 600;
+    color: #c0112f;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     margin-bottom: 4px;
   }
 
-  /* 변경 항목 표시 */
-  .change-list {
-    margin: 12px 0;
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 4px;
   }
 
-  .change-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 13px;
-    color: #333;
-    padding: 8px 12px;
-    background: #F7F8FA;
-    border-radius: 8px;
-    margin-bottom: 8px;
-  }
-
-  .change-badge {
-    background: #E94560;
-    color: white;
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 4px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .input-wrap {
-    margin: 14px 0;
-  }
-
-  .input-label {
+  .card-desc {
     font-size: 12px;
-    font-weight: 700;
-    color: #888;
-    margin-bottom: 6px;
-    display: block;
+    color: #aeaeb2;
+    font-weight: 300;
+    line-height: 1.5;
   }
 
-  .input-row {
-    display: flex;
-    gap: 8px;
+  .card-count {
+    font-size: 11px;
+    color: #48484a;
+    margin-top: 5px;
   }
 
-  .input-field {
-    flex: 1;
-    padding: 10px 14px;
-    border: 1.5px solid #E0E0E0;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #1A1A2E;
-    background: white;
-    outline: none;
-  }
-
-  .input-field:focus {
-    border-color: #E94560;
-  }
-
-  .apply-btn {
-    padding: 10px 16px;
-    background: #E94560;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
+  .arrow {
+    font-size: 20px;
+    color: #48484a;
+    margin-left: 12px;
   }
 
   .footer {
     text-align: center;
-    margin-top: 32px;
-    font-size: 12px;
-    color: #bbb;
+    margin-top: 48px;
+    font-size: 11px;
+    color: #3a3a3c;
+    line-height: 2;
   }
 
-  .footer strong {
-    color: #E94560;
+  @media (max-width: 480px) {
+    .logo-text { font-size: 34px; }
   }
 </style>
 </head>
 <body>
-
-<div class="hero">
-  <div class="badge">AI 활용 가이드</div>
-  <h1>10분 완성!<br><span>AI로 메뉴 사진</span> 만들기</h1>
-  <p>스마트폰 사진 한 장으로 전문가급 메뉴 이미지를</p>
-</div>
-
 <div class="container">
-  <div class="steps-wrap">
 
-    <!-- STEP 1 -->
-    <div class="step-card" id="step1">
-      <div class="step-header" onclick="toggleStep('step1')">
-        <div class="step-num">1</div>
-        <div class="step-title-wrap">
-          <div class="step-label">STEP 01</div>
-          <div class="step-title">사진 준비하기</div>
-        </div>
-        <div class="step-arrow">▾</div>
-      </div>
-      <div class="step-body">
-        <p class="step-desc">
-          메뉴 사진을 스마트폰으로 찍어 준비하세요.<br>
-          아래 조건을 지키면 더 좋은 결과가 나옵니다.
-        </p>
-        <div class="change-list">
-          <div class="change-item">
-            <span class="change-badge">✓</span>
-            <span>자연광이나 밝은 조명 아래에서 촬영</span>
-          </div>
-          <div class="change-item">
-            <span class="change-badge">✓</span>
-            <span>그릇 전체가 나오도록 위에서 또는 45도 각도로</span>
-          </div>
-          <div class="change-item">
-            <span class="change-badge">✓</span>
-            <span>배경이 너무 복잡하지 않을 것</span>
-          </div>
-          <div class="change-item">
-            <span class="change-badge">✓</span>
-            <span>흔들리지 않게 두 손으로 고정</span>
-          </div>
-        </div>
-        <div class="tip-box">
-          <strong>💡 Tip</strong>
-          완벽하지 않아도 됩니다. AI가 보정해줍니다.
-        </div>
-      </div>
+  <div class="header">
+    <div class="logo-text">Innov<span>way</span></div>
+    <div class="logo-sub">이노브웨이</div>
+    <div class="header-desc">
+      소상공인을 위한 AI 도구 모음입니다.<br>
+      필요한 카테고리를 선택해 바로 사용해보세요.
     </div>
+  </div>
 
-    <!-- STEP 2 -->
-    <div class="step-card" id="step2">
-      <div class="step-header" onclick="toggleStep('step2')">
-        <div class="step-num">2</div>
-        <div class="step-title-wrap">
-          <div class="step-label">STEP 02</div>
-          <div class="step-title">기본 프롬프트 복사하기</div>
-        </div>
-        <div class="step-arrow">▾</div>
-      </div>
-      <div class="step-body">
-        <p class="step-desc">
-          아래 프롬프트를 복사해서 Claude나 ChatGPT에 붙여넣으세요.<br>
-          사진도 함께 첨부해야 합니다.
-        </p>
-        <div class="prompt-box">
-          <div class="prompt-tag">기본 프롬프트</div>
-          <div class="prompt-text" id="basePrompt">Situation(상황·역할)
-[가게이름]의 메뉴 [메뉴이름] 사진을 핸드폰으로 찍어 첨부했어.
-온라인 메뉴판에 올릴 이미지로 활용하고 싶어.
+  <hr class="divider">
+  <div class="section-title">AI Tools</div>
 
-Task(해야 할 일)
-첨부 사진 기반으로 메뉴판용 프롬프트 3세트 제안해줘.
-각 세트 구성:
-1) 제안 이유
-2) 프롬프트 특징
-3) 한글 프롬프트 (코드블록)
-
-Intent(목적)
-앱이나 SNS에서 손님이 보고 클릭하고 싶어지는,
-메뉴판에 어울리는 깔끔하고 식욕 도는 이미지.
-
-Concern(고려사항)
-1. 메뉴 이미지 가이드(비율·배경·구도·금지사항)에 부합할 것
-2. 가이드는 웹 실시간 검색 결과만 사용 (추측·기억 금지)
-3. 못 찾으면 그 사실을 먼저 알리고 일반 모범 기준으로 대체
-4. 3세트 중 1개는 → 첨부 사진과 유사한 그릇 + 흰색 배경
-5. 이미지 아직 생성 금지. 이번 턴은 프롬프트 제안까지만.</div>
-          <button class="copy-btn" onclick="copyText('basePrompt', this)">
-            📋 프롬프트 복사하기
-          </button>
-        </div>
-        <div class="tip-box">
-          <strong>💡 Tip</strong>
-          [가게이름]과 [메뉴이름]은 STEP 3에서 자동으로 바꿀 수 있어요.
-        </div>
-      </div>
+  <!-- 인스타그램 -->
+  <a class="link-card" href="instagram_gpts_hub.html">
+    <div class="card-icon">
+      <svg width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="ig" cx="30%" cy="107%" r="150%">
+            <stop offset="0%" stop-color="#fdf497"/>
+            <stop offset="5%" stop-color="#fdf497"/>
+            <stop offset="45%" stop-color="#fd5949"/>
+            <stop offset="60%" stop-color="#d6249f"/>
+            <stop offset="90%" stop-color="#285AEB"/>
+          </radialGradient>
+        </defs>
+        <rect width="120" height="120" rx="26" fill="url(#ig)"/>
+        <rect x="14" y="14" width="92" height="92" rx="20" fill="none" stroke="#fff" stroke-width="6"/>
+        <circle cx="60" cy="60" r="22" fill="none" stroke="#fff" stroke-width="6"/>
+        <circle cx="88" cy="32" r="6" fill="#fff"/>
+      </svg>
     </div>
-
-    <!-- STEP 3 -->
-    <div class="step-card" id="step3">
-      <div class="step-header" onclick="toggleStep('step3')">
-        <div class="step-num">3</div>
-        <div class="step-title-wrap">
-          <div class="step-label">STEP 03</div>
-          <div class="step-title">내 가게에 맞게 수정하기</div>
-        </div>
-        <div class="step-arrow">▾</div>
-      </div>
-      <div class="step-body">
-        <p class="step-desc">
-          가게 이름과 메뉴 이름을 입력하면 프롬프트가 자동으로 바뀝니다.
-        </p>
-
-        <div class="input-wrap">
-          <label class="input-label">가게 이름</label>
-          <div class="input-row">
-            <input class="input-field" id="storeName" placeholder="예: 홍길동 떡볶이" type="text">
-          </div>
-        </div>
-
-        <div class="input-wrap">
-          <label class="input-label">메뉴 이름</label>
-          <div class="input-row">
-            <input class="input-field" id="menuName" placeholder="예: 국물떡볶이" type="text">
-            <button class="apply-btn" onclick="applyCustom()">적용</button>
-          </div>
-        </div>
-
-        <div class="prompt-box" id="customBox" style="display:none">
-          <div class="prompt-tag">내 가게 맞춤 프롬프트</div>
-          <div class="prompt-text" id="customPrompt"></div>
-          <button class="copy-btn" onclick="copyText('customPrompt', this)">
-            📋 맞춤 프롬프트 복사하기
-          </button>
-        </div>
-      </div>
+    <div class="card-text">
+      <div class="card-category">Instagram</div>
+      <div class="card-title">인스타그램 AI 도구</div>
+      <div class="card-desc">프로필 기획 · 사진 · 하이라이트 커버 제작</div>
+      <div class="card-count">GPTs 2개</div>
     </div>
+    <div class="arrow">›</div>
+  </a>
 
-    <!-- STEP 4 -->
-    <div class="step-card" id="step4">
-      <div class="step-header" onclick="toggleStep('step4')">
-        <div class="step-num">4</div>
-        <div class="step-title-wrap">
-          <div class="step-label">STEP 04</div>
-          <div class="step-title">다른 메뉴에 재활용하기</div>
-        </div>
-        <div class="step-arrow">▾</div>
-      </div>
-      <div class="step-body">
-        <p class="step-desc">
-          다음 메뉴에 쓸 때는 아래 프롬프트를 AI에게 붙여넣으세요.<br>
-          메뉴 이름만 바꾸면 바로 재사용됩니다.
-        </p>
-        <div class="prompt-box">
-          <div class="prompt-tag">재활용 프롬프트</div>
-          <div class="prompt-text" id="reusePrompt">아래 프롬프트 템플릿을 [가게이름] [새메뉴이름]으로 반영해서 변경해서 그 프롬프트를 다시 작성해줘
-
-----
-&lt;프롬프트 템플릿&gt;
-Situation(상황·역할)
-[가게이름]의 메뉴 [메뉴이름] 사진을 핸드폰으로 찍어 첨부했어.
-온라인 메뉴판에 올릴 이미지로 활용하고 싶어.
-
-Task(해야 할 일)
-첨부 사진 기반으로 메뉴판용 프롬프트 3세트 제안해줘.
-각 세트 구성:
-1) 제안 이유
-2) 프롬프트 특징
-3) 한글 프롬프트 (코드블록)
-
-Intent(목적)
-앱이나 SNS에서 손님이 보고 클릭하고 싶어지는,
-메뉴판에 어울리는 깔끔하고 식욕 도는 이미지.
-
-Concern(고려사항)
-1. 메뉴 이미지 가이드(비율·배경·구도·금지사항)에 부합할 것
-2. 가이드는 웹 실시간 검색 결과만 사용 (추측·기억 금지)
-3. 못 찾으면 그 사실을 먼저 알리고 일반 모범 기준으로 대체
-4. 3세트 중 1개는 → 첨부 사진과 유사한 그릇 + 흰색 배경
-5. 이미지 아직 생성 금지. 이번 턴은 프롬프트 제안까지만.</div>
-          <button class="copy-btn" onclick="copyText('reusePrompt', this)">
-            📋 재활용 프롬프트 복사하기
-          </button>
-        </div>
-        <div class="tip-box">
-          <strong>💡 Tip</strong>
-          STEP 3에서 만든 맞춤 프롬프트를 AI 대화창에 저장해두면 다음번에 더 빠르게 재활용할 수 있어요.
-        </div>
-      </div>
+  <!-- 블로그 - 네이버 초록 N -->
+  <div class="link-card coming">
+    <div class="card-icon">
+      <svg width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <rect width="120" height="120" rx="26" fill="#03C75A"/>
+        <text x="50%" y="58%" font-size="62" font-family="Arial Black, sans-serif" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">N</text>
+      </svg>
     </div>
+    <div class="card-text">
+      <div class="card-category">Blog</div>
+      <div class="card-title">블로그 AI 도구</div>
+      <div class="card-desc">Coming Soon</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
 
+  <!-- 사진 - 파란 그라데이션 -->
+  <div class="link-card coming">
+    <div class="card-icon">
+      <svg width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="photo" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4facfe"/>
+            <stop offset="100%" stop-color="#0052cc"/>
+          </linearGradient>
+        </defs>
+        <rect width="120" height="120" rx="26" fill="url(#photo)"/>
+        <rect x="16" y="30" width="88" height="66" rx="8" fill="none" stroke="#fff" stroke-width="5"/>
+        <circle cx="60" cy="63" r="18" fill="none" stroke="#fff" stroke-width="5"/>
+        <circle cx="60" cy="63" r="8" fill="#fff"/>
+        <rect x="36" y="20" width="22" height="14" rx="4" fill="#fff"/>
+        <circle cx="90" cy="44" r="4" fill="#fff"/>
+      </svg>
+    </div>
+    <div class="card-text">
+      <div class="card-category">Photo</div>
+      <div class="card-title">사진 AI 도구</div>
+      <div class="card-desc">Coming Soon</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <!-- 영상 - 레드 그라데이션 -->
+  <div class="link-card coming">
+    <div class="card-icon">
+      <svg width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="video" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f5a623"/>
+            <stop offset="100%" stop-color="#d4560a"/>
+          </linearGradient>
+        </defs>
+        <rect width="120" height="120" rx="26" fill="url(#video)"/>
+        <rect x="12" y="32" width="66" height="56" rx="8" fill="none" stroke="#fff" stroke-width="5"/>
+        <polyline points="78,46 108,30 108,90 78,74" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+        <polygon points="36,48 36,72 58,60" fill="#fff"/>
+      </svg>
+    </div>
+    <div class="card-text">
+      <div class="card-category">Video</div>
+      <div class="card-title">영상 AI 도구</div>
+      <div class="card-desc">Coming Soon</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <!-- 플레이스 - 네이버 초록 핀 -->
+  <div class="link-card coming">
+    <div class="card-icon">
+      <svg width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <rect width="120" height="120" rx="26" fill="#03C75A"/>
+        <path d="M60 18 C40 18 24 34 24 54 C24 76 60 102 60 102 C60 102 96 76 96 54 C96 34 80 18 60 18Z" fill="#fff"/>
+        <circle cx="60" cy="54" r="15" fill="#03C75A"/>
+      </svg>
+    </div>
+    <div class="card-text">
+      <div class="card-category">Place</div>
+      <div class="card-title">플레이스 AI 도구</div>
+      <div class="card-desc">Coming Soon</div>
+    </div>
+    <div class="arrow">›</div>
   </div>
 
   <div class="footer">
-    <strong>Innovway</strong> · AI 활용 소상공인 교육 자료
+    <p>© 2026 Innovway · candleral78.github.io</p>
   </div>
+
 </div>
-
-<script>
-  function toggleStep(id) {
-    const card = document.getElementById(id);
-    card.classList.toggle('active');
-  }
-
-  function copyText(id, btn) {
-    const text = document.getElementById(id).innerText;
-    navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.innerHTML;
-      btn.innerHTML = '✅ 복사 완료!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.innerHTML = orig;
-        btn.classList.remove('copied');
-      }, 2000);
-    }).catch(() => {
-      // fallback
-      const el = document.getElementById(id);
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      window.getSelection().removeAllRanges();
-      window.getSelection().addRange(range);
-      document.execCommand('copy');
-      window.getSelection().removeAllRanges();
-      btn.innerHTML = '✅ 복사 완료!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.innerHTML = id === 'basePrompt' ? '📋 프롬프트 복사하기' : id === 'customPrompt' ? '📋 맞춤 프롬프트 복사하기' : '📋 재활용 프롬프트 복사하기';
-        btn.classList.remove('copied');
-      }, 2000);
-    });
-  }
-
-  function applyCustom() {
-    const store = document.getElementById('storeName').value.trim();
-    const menu = document.getElementById('menuName').value.trim();
-    if (!store || !menu) {
-      alert('가게 이름과 메뉴 이름을 모두 입력해주세요.');
-      return;
-    }
-    const template = `Situation(상황·역할)\n[${store}]의 메뉴 [${menu}] 사진을 핸드폰으로 찍어 첨부했어.\n온라인 메뉴판에 올릴 이미지로 활용하고 싶어.\n\nTask(해야 할 일)\n첨부 사진 기반으로 메뉴판용 프롬프트 3세트 제안해줘.\n각 세트 구성:\n1) 제안 이유\n2) 프롬프트 특징\n3) 한글 프롬프트 (코드블록)\n\nIntent(목적)\n앱이나 SNS에서 손님이 보고 클릭하고 싶어지는,\n메뉴판에 어울리는 깔끔하고 식욕 도는 이미지.\n\nConcern(고려사항)\n1. 메뉴 이미지 가이드(비율·배경·구도·금지사항)에 부합할 것\n2. 가이드는 웹 실시간 검색 결과만 사용 (추측·기억 금지)\n3. 못 찾으면 그 사실을 먼저 알리고 일반 모범 기준으로 대체\n4. 3세트 중 1개는 → 첨부 사진과 유사한 그릇 + 흰색 배경\n5. 이미지 아직 생성 금지. 이번 턴은 프롬프트 제안까지만.`;
-    document.getElementById('customPrompt').innerText = template;
-    document.getElementById('customBox').style.display = 'block';
-  }
-
-  // 첫 번째 스텝 자동 열기
-  document.getElementById('step1').classList.add('active');
-</script>
 </body>
 </html>
