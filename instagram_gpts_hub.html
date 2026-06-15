@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>인스타그램 AI 도구 모음</title>
+<title>인스타그램 AI 도구 모음 | Innovway</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -17,33 +17,39 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: 48px 20px;
   }
 
-  .container {
-    max-width: 480px;
-    width: 100%;
+  .container { max-width: 480px; width: 100%; }
+
+  /* 뒤로가기 */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    color: #636366;
+    text-decoration: none;
+    margin-bottom: 32px;
+    transition: color 0.15s;
   }
+  .back:hover { color: #aeaeb2; }
+  .back span { margin-right: 6px; font-size: 16px; }
 
   /* 헤더 */
-  .header {
-    text-align: center;
-    margin-bottom: 48px;
-  }
+  .header { text-align: center; margin-bottom: 40px; }
 
-  .insta-logo-main {
-    width: 68px;
-    height: 68px;
-    margin: 0 auto 24px;
+  .insta-logo {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
     display: block;
   }
 
   .header h1 {
     font-size: 20px;
     font-weight: 700;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: #ffffff;
-    letter-spacing: -0.3px;
   }
 
   .header p {
@@ -53,12 +59,19 @@
     line-height: 1.8;
   }
 
+  /* 구분선 */
+  .divider {
+    border: none;
+    border-top: 1px solid #2c2c2e;
+    margin: 28px 0 20px;
+  }
+
   /* 섹션 타이틀 */
   .section-title {
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 2px;
-    color: #636366;
+    color: #48484a;
     text-transform: uppercase;
     margin-bottom: 12px;
   }
@@ -83,16 +96,16 @@
     transform: translateY(-1px);
   }
 
-  /* 카드 아이콘 - 인스타 로고 통일 */
   .card-icon {
     width: 44px;
     height: 44px;
     border-radius: 10px;
-    margin-right: 16px;
-    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-right: 16px;
+    flex-shrink: 0;
+    overflow: hidden;
   }
 
   .card-text { flex: 1; }
@@ -111,7 +124,7 @@
     font-weight: 600;
     color: #ffffff;
     line-height: 1.4;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
 
   .card-desc {
@@ -123,8 +136,22 @@
 
   .arrow {
     font-size: 20px;
-    color: #636366;
+    color: #48484a;
     margin-left: 12px;
+  }
+
+  /* 콘텐츠 도구 카드 - 약간 다른 포인트 */
+  .link-card.content-card {
+    border-color: #3a3a3c;
+  }
+
+  .content-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #c0112f;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
   }
 
   /* 푸터 */
@@ -132,29 +159,30 @@
     text-align: center;
     margin-top: 40px;
     font-size: 11px;
-    color: #48484a;
+    color: #3a3a3c;
     line-height: 2;
   }
 
-  .footer a {
-    color: #636366;
-    text-decoration: none;
-  }
+  .footer a { color: #48484a; text-decoration: none; }
 
   @media (max-width: 480px) {
-    .header h1 { font-size: 18px; }
+    body { padding: 32px 16px; }
   }
 </style>
 </head>
 <body>
-
 <div class="container">
 
+  <!-- 뒤로가기 -->
+  <a class="back" href="index.html">
+    <span>‹</span> Innovway AI Tools
+  </a>
+
+  <!-- 헤더 -->
   <div class="header">
-    <!-- 메인 인스타 로고 -->
-    <svg class="insta-logo-main" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <svg class="insta-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="ig-main" cx="30%" cy="107%" r="150%">
+        <radialGradient id="ig" cx="30%" cy="107%" r="150%">
           <stop offset="0%" stop-color="#fdf497"/>
           <stop offset="5%" stop-color="#fdf497"/>
           <stop offset="45%" stop-color="#fd5949"/>
@@ -162,19 +190,18 @@
           <stop offset="90%" stop-color="#285AEB"/>
         </radialGradient>
       </defs>
-      <rect width="120" height="120" rx="26" fill="url(#ig-main)"/>
+      <rect width="120" height="120" rx="26" fill="url(#ig)"/>
       <rect x="14" y="14" width="92" height="92" rx="20" fill="none" stroke="#fff" stroke-width="6"/>
       <circle cx="60" cy="60" r="22" fill="none" stroke="#fff" stroke-width="6"/>
       <circle cx="88" cy="32" r="6" fill="#fff"/>
     </svg>
-
     <h1>인스타그램 AI 도구 모음</h1>
     <p>AI로 인스타그램을 더 스마트하게 운영하세요.</p>
   </div>
 
+  <!-- GPTs 도구 섹션 -->
   <div class="section-title">GPTs 도구</div>
 
-  <!-- 카드 1 -->
   <a class="link-card" href="https://chatgpt.com/g/g-6a1567c72d148191b4b2656aae85495f-inseutageuraem-peuropil-gihoeg-gpts" target="_blank">
     <div class="card-icon">
       <svg width="44" height="44" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
@@ -201,7 +228,6 @@
     <div class="arrow">›</div>
   </a>
 
-  <!-- 카드 2 -->
   <a class="link-card" href="https://chatgpt.com/g/g-6a1550c266a4819185b883ec3c259ca9-inseutageuraem-peuropil-sajin-mic-hairaiteu-keobeo-gpts" target="_blank">
     <div class="card-icon">
       <svg width="44" height="44" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
@@ -228,12 +254,42 @@
     <div class="arrow">›</div>
   </a>
 
+  <hr class="divider">
+
+  <!-- 콘텐츠 도구 섹션 -->
+  <div class="section-title">콘텐츠 도구</div>
+
+  <a class="link-card content-card" href="vol15_cardnews_260605.html">
+    <div class="card-icon">
+      <svg width="44" height="44" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="ig3" cx="30%" cy="107%" r="150%">
+            <stop offset="0%" stop-color="#fdf497"/>
+            <stop offset="5%" stop-color="#fdf497"/>
+            <stop offset="45%" stop-color="#fd5949"/>
+            <stop offset="60%" stop-color="#d6249f"/>
+            <stop offset="90%" stop-color="#285AEB"/>
+          </radialGradient>
+        </defs>
+        <rect width="120" height="120" rx="26" fill="url(#ig3)"/>
+        <rect x="14" y="14" width="92" height="92" rx="20" fill="none" stroke="#fff" stroke-width="6"/>
+        <circle cx="60" cy="60" r="22" fill="none" stroke="#fff" stroke-width="6"/>
+        <circle cx="88" cy="32" r="6" fill="#fff"/>
+      </svg>
+    </div>
+    <div class="card-text">
+      <div class="content-label">Carousel</div>
+      <div class="card-title">카드뉴스 캐러셀 제작기</div>
+      <div class="card-desc">인스타그램 캐러셀 카드뉴스 바로 제작</div>
+    </div>
+    <div class="arrow">›</div>
+  </a>
+
   <div class="footer">
-    <p>Powered by <a href="https://candleral78.github.io" target="_blank">Innovway</a></p>
-    <p>Instagram is a trademark of Meta Platforms, Inc.</p>
+    <p><a href="index.html">← Innovway AI Tools</a></p>
+    <p style="margin-top:4px;">Instagram is a trademark of Meta Platforms, Inc.</p>
   </div>
 
 </div>
-
 </body>
 </html>
