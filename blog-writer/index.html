@@ -370,7 +370,7 @@ ul.check small{display:block;color:var(--muted)}
   <section class="panel" id="admin-gate" hidden>
     <h2>컨설턴트 화면</h2>
     <p class="hint">고객 목소리 보관함, 벤치마킹, 작성·발행 이력, 첨부 보고서는 컨설턴트만 볼 수 있습니다.</p>
-    <label>컨설턴트 암호<input type="password" id="admin-pw" autocomplete="off" style="max-width:18em"></label>
+    <label>컨설턴트 암호<input type="password" id="admin-pw" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="max-width:18em"></label>
     <div class="row"><button class="btn" id="btn-admin">들어가기</button><span class="status" id="admin-status"></span></div>
   </section>
 
@@ -598,7 +598,7 @@ function tab(which,sub){ if(which==="cons"&&REMOTE&&!AUTH.adminPw){ $("tab-cons"
   else initCons(sub||consView); }
 $("tab-write").onclick=()=>{ $("admin-gate").hidden=true; tab("write") };
 $("tab-cons").onclick=()=>{ if(REMOTE&&!AUTH.adminPw){ tab("write"); for(let i=1;i<=5;i++)$("s"+i).hidden=true; $("steps").hidden=true; $("admin-gate").hidden=false; $("tab-write").setAttribute("aria-selected",false); $("tab-cons").setAttribute("aria-selected",true); $("admin-pw").focus(); return } tab("cons") };
-$("btn-admin").onclick=async()=>{ const st=$("admin-status"), pw=$("admin-pw").value; if(!pw){st.textContent="암호를 넣어 주세요.";return} st.textContent="확인하는 중입니다."; AUTH.adminPw=pw;
+$("btn-admin").onclick=async()=>{ const st=$("admin-status"), pw=$("admin-pw").value.replace(/\s+/g,""); if(!pw){st.textContent="암호를 넣어 주세요.";return} st.textContent="확인하는 중입니다."; AUTH.adminPw=pw;
   try{ await api("checkAdmin"); $("admin-pw").value=""; st.textContent=""; $("admin-gate").hidden=true; $("f-author").value="컨설턴트"; loadSaved(); tab("cons") }
   catch(e){ AUTH.adminPw=""; st.textContent=e&&e.code==="not_admin"?"암호가 맞지 않습니다.":errMsg(e) } };
 ["voice","bench","admin","report"].forEach(k=>$("tab-"+k).onclick=()=>showCons(k));
