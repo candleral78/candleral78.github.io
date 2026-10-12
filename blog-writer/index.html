@@ -654,7 +654,7 @@ function showBiz(b){
   $("biz-confirm").hidden=false; $("biz-form").hidden=true; S.biz=b; setCard("");
   if(!b.example&&b.id){ const id=b.id; store.getCard(id).then(c=>{ if(S.biz&&S.biz.id===id) setCard(c) }).catch(()=>{}) }
 }
-function setCard(data){ S.card=data||""; $("card-prev-wrap").hidden=!S.card; if(S.card)$("card-prev").src=S.card; else $("card-prev").removeAttribute("src"); $("f-card").value=""; S.cardDirty=false; }
+function setCard(data){ S.card=data||""; S.cardOff=false; $("card-prev-wrap").hidden=!S.card; if(S.card)$("card-prev").src=S.card; else $("card-prev").removeAttribute("src"); $("f-card").value=""; S.cardDirty=false; }
 $("f-card").onchange=async()=>{ const st=$("card-status"); const fl=[...$("f-card").files]; if(!fl.length)return; st.textContent="명함을 읽는 중입니다.";
   try{ const r=await toImages(fl.slice(0,1),1); if(!r.files.length){st.textContent="읽을 수 없는 파일입니다. JPG, PNG, PDF로 올려 주세요.";return}
     const d=await shrinkToDataUrl(r.files[0]); if(!d){st.textContent="이미지가 너무 큽니다. 더 작은 파일로 올려 주세요.";return}
@@ -691,10 +691,10 @@ $("btn-card-make").onclick=async()=>{ const st=$("card-status"), f=readForm();
   try{ const r=await drawCard(Object.assign({},S.biz,f),$("card-color").value); let d=r.data;
     if(d.length>230000){ const blob=await (await fetch(d)).blob(); d=await shrinkToDataUrl(blob) }
     if(!d){st.textContent="명함을 만들지 못했습니다. 다시 눌러 주세요.";return}
-    S.card=d; S.cardDirty=true; $("card-prev").src=d; $("card-prev-wrap").hidden=false; $("f-card").value="";
+    S.card=d; S.cardDirty=true; S.cardOff=false; $("card-prev").src=d; $("card-prev-wrap").hidden=false; $("f-card").value="";
     st.textContent=r.qr?"명함을 만들었습니다. 휴대폰 카메라로 QR이 열리는지 한 번 확인한 뒤 저장해 주세요.":"명함을 만들었습니다. 연결할 주소가 없어 QR은 넣지 못했습니다.";
   }catch(e){st.textContent="명함을 만들지 못했습니다. 다시 눌러 주세요."} };
-$("btn-card-del").onclick=()=>{ S.card=""; S.cardDirty=true; $("card-prev-wrap").hidden=true; $("f-card").value=""; };
+$("btn-card-del").onclick=()=>{ S.card=""; S.cardDirty=true; S.cardOff=true; $("card-prev-wrap").hidden=true; $("f-card").value=""; };
 function fillForm(b){
   $("f-name").value=b.name||"";$("f-category").value=b.category||"";$("f-address").value=b.address||"";$("f-hours").value=b.hours||"";
   $("f-contact").value=b.contact||"";$("f-menu").value=b.menu||"";$("f-type").value=b.type||"store";$("f-shop").value=b.shop||"";
@@ -728,13 +728,20 @@ async function lookup(){
 $("btn-lookup").onclick=lookup;
 $("btn-example").onclick=()=>{$("s1-status").textContent="예시 업체입니다. 저장되지 않습니다.";showBiz(Object.assign({},EXAMPLE))};
 $("btn-biz-edit").onclick=()=>{$("f-code-wrap").hidden=true;fillForm(S.biz);$("biz-confirm").hidden=true;$("biz-form").hidden=false};
-$("btn-biz-yes").onclick=()=>startQuestions();
+/* 명함이 없으면 업체 정보로 자동으로 만듭니다. 대표님이 명함을 지운 업체(noCard)는 만들지 않습니다. */
+async function autoCard(b){ if(S.card||!b||!b.name||b.noCard||S.cardOff) return false;
+  try{ const r=await drawCard(b,($("card-color")||{}).value); let d=r&&r.data; if(!d) return false;
+    if(d.length>230000){ const blob=await (await fetch(d)).blob(); d=await shrinkToDataUrl(blob) } if(!d) return false;
+    S.card=d; S.cardDirty=true; $("card-prev").src=d; $("card-prev-wrap").hidden=false; return true }catch(e){ return false } }
+$("btn-biz-yes").onclick=async()=>{ const b=S.biz; if(b&&!S.card&&await autoCard(b)&&!b.example){ store.saveCard(b.id,S.card).then(()=>{S.cardDirty=false}).catch(()=>{}) } startQuestions() };
 $("btn-biz-save").onclick=async()=>{
   const f=readForm(); const st=$("save-status");
   if(!f.name){st.textContent="상호를 적어 주세요.";return}
   const now=new Date().toISOString();
   if(REMOTE&&S.biz&&S.biz.isNew&&!S.biz.example){ const c=$("f-code").value.trim(); if(!/^\d{6,8}$/.test(c)){st.textContent="업체 코드를 숫자 6~8자리로 정해 주세요.";return} AUTH.codes[S.biz.id]=c; ls.set("bw_codes",AUTH.codes); }
   const b=Object.assign({},S.biz,f,{updatedAt:now}); if(!b.createdAt)b.createdAt=now;
+  if(S.cardOff&&!S.card) b.noCard=true; else if(S.card) delete b.noCard;
+  if(!S.card) await autoCard(b);
   if(!b.example){ st.textContent="저장하는 중입니다.";
     try{await store.saveBiz(b); delete b.isNew; $("f-code-wrap").hidden=true; if(S.cardDirty){await store.saveCard(b.id,S.card);S.cardDirty=false}}
     catch(e){ if(REMOTE){ st.textContent="저장하지 못했습니다. "+errMsg(e); return } st.textContent="저장하지 못했습니다. 이 화면에서는 저장 권한이 없을 수 있습니다. 글쓰기는 계속할 수 있습니다."} }
