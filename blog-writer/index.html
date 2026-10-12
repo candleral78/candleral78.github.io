@@ -1377,6 +1377,7 @@ go(1);
 (async()=>{
   const c=window.claude;
   if(REMOTE){ sample=remoteSample; downloads=remoteDl; imgLimit=5; $("btn-to-admin").hidden=true;
+    if(!/[?&#]c(=|&|$)/.test(location.search+location.hash)) $("tab-write").parentElement.hidden=true;
     try{ await api("ping") }catch(e){ sample=null; $("ai-off").textContent="서버에 연결하지 못했습니다. 잠시 뒤 다시 열어 주세요. ("+(e&&e.message||"")+")"; }
   } else if(c&&c.use){
     try{ [db,sample,downloads]=await Promise.all([c.use("db"),c.use("sample"),c.use("downloads")]); }catch(e){}
