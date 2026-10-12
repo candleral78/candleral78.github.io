@@ -261,7 +261,7 @@ ul.check small{display:block;color:var(--muted)}
         <div class="row" id="card-prev-wrap" hidden><img id="card-prev" alt="명함" style="max-width:240px;border:1px solid var(--line);border-radius:6px"><button class="btn small ghost" id="btn-card-del">명함 빼기</button></div>
         <span class="status" id="card-status"></span>
         </div>
-        <label id="f-code-wrap" hidden>업체 코드 정하기 <small>숫자 4~8자리. 다음에 이 업체를 불러올 때 씁니다. 다른 사람이 업체 정보를 열지 못하게 하는 용도입니다.</small><input type="text" id="f-code" inputmode="numeric" autocomplete="off" style="max-width:14em"></label>
+        <label id="f-code-wrap" hidden>업체 코드 정하기 <small>숫자 6~8자리. 다음에 이 업체를 불러올 때 씁니다. 다른 사람이 업체 정보를 열지 못하게 하는 용도입니다.</small><input type="text" id="f-code" inputmode="numeric" autocomplete="off" style="max-width:14em"></label>
         <div class="row"><button class="btn" id="btn-biz-save">저장하고 다음</button><span class="status" id="save-status"></span></div>
       </div>
     </section>
@@ -402,6 +402,12 @@ ul.check small{display:block;color:var(--muted)}
     <div class="sum" id="a-sum"></div>
     <div id="a-body" style="display:flex;flex-direction:column;gap:14px"><p class="hint">아직 만든 글이 없습니다. 글을 쓰면 여기에 업체별로 쌓입니다.</p></div>
     <span class="status" id="a-status"></span>
+    <div class="box" id="code-reset" hidden style="margin-top:18px">
+      <h3 style="margin:0 0 6px">업체 코드 다시 정하기</h3>
+      <p class="hint">대표님이 코드를 잊었거나, 코드를 여러 번 틀려 잠겼을 때 씁니다. 위에서 고른 업체의 코드가 새로 정해지고 잠금도 풀립니다.</p>
+      <div class="row"><input type="text" id="reset-code" inputmode="numeric" maxlength="8" placeholder="새 코드 (숫자 6~8자리)" style="max-width:220px"><button class="btn small" id="btn-reset-code">새 코드로 바꾸기</button></div>
+      <span class="status" id="reset-status"></span>
+    </div>
   </section>
 
   <!-- 첨부 보고서 -->
@@ -599,7 +605,7 @@ $("btn-admin").onclick=async()=>{ const st=$("admin-status"), pw=$("admin-pw").v
 
 /* ---------- AI 호출 ---------- */
 const ERR={not_granted:"Claude 사용을 허용하지 않아 AI 기능을 쓸 수 없습니다.",sampling_disabled:"이 계정에서는 AI 기능을 쓸 수 없습니다.",rate_limited:"요청이 많습니다. 잠시 뒤에 다시 눌러 주세요.",session_expired:"로그인이 만료됐습니다. 다시 로그인해 주세요.",image_rejected:"읽을 수 없는 사진이 있습니다. 다른 사진으로 바꿔 주세요.",images_unavailable:"이 화면에서는 사진을 AI에 보낼 수 없습니다.",refused:"이 내용으로는 글을 만들 수 없습니다. 입력을 바꿔 주세요.",invalid_json:"결과를 읽지 못했습니다. 다시 눌러 주세요.",prompt_too_large:"입력이 너무 깁니다. 내용을 줄여 주세요.",cancelled:""};
-const QUOTA=["quota","biz_daily_limit","biz_monthly_limit"], SRV=QUOTA.concat(["bad_code","not_admin","not_configured","no_biz","network","upstream_error","prompt_too_large","refused"]);
+const QUOTA=["quota","biz_daily_limit","biz_monthly_limit"], SRV=QUOTA.concat(["bad_code","locked","not_admin","not_configured","no_biz","network","upstream_error","prompt_too_large","refused"]);
 const errMsg=e=>(e&&e.message&&SRV.includes(e.code)&&REMOTE)?e.message+(QUOTA.includes(e.code)?" \"내 AI로 쓰기\"는 그대로 쓸 수 있습니다.":""):(e&&e.code in ERR)?ERR[e.code]:"잠시 문제가 생겼습니다. 다시 눌러 주세요.";
 function needAI(statusEl){ if(sample) return true; statusEl.textContent="AI 기능을 쓸 수 없는 화면입니다."; return false; }
 function today(){ return new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"long",day:"numeric"}).format(new Date()); }
@@ -674,7 +680,7 @@ function askCode(id,name,url){ codeFor={id,url}; $("code-title").textContent=(na
 $("btn-code").onclick=async()=>{ if(!codeFor)return; const st=$("s1-status"), v=$("code-in").value.trim(); if(!v){st.textContent="업체 코드를 넣어 주세요.";return}
   AUTH.codes[codeFor.id]=v; st.textContent="확인하는 중입니다.";
   try{ const b=await store.getBiz(codeFor.id); ls.set("bw_codes",AUTH.codes); $("code-box").hidden=true; rememberBiz(b); st.textContent="등록된 업체입니다."; showBiz(b); loadSaved(); }
-  catch(e){ delete AUTH.codes[codeFor.id]; st.textContent=e&&e.code==="bad_code"?"업체 코드가 맞지 않습니다. 다시 넣어 주세요.":errMsg(e) } };
+  catch(e){ delete AUTH.codes[codeFor.id]; st.textContent=errMsg(e) } };
 async function lookup(){
   const url=$("place-url").value.trim(); const st=$("s1-status");
   if(!safeUrl(url)){st.textContent="https:// 로 시작하는 주소를 넣어 주세요.";return}
@@ -696,7 +702,7 @@ $("btn-biz-save").onclick=async()=>{
   const f=readForm(); const st=$("save-status");
   if(!f.name){st.textContent="상호를 적어 주세요.";return}
   const now=new Date().toISOString();
-  if(REMOTE&&S.biz&&S.biz.isNew&&!S.biz.example){ const c=$("f-code").value.trim(); if(!/^\d{4,8}$/.test(c)){st.textContent="업체 코드를 숫자 4~8자리로 정해 주세요.";return} AUTH.codes[S.biz.id]=c; ls.set("bw_codes",AUTH.codes); }
+  if(REMOTE&&S.biz&&S.biz.isNew&&!S.biz.example){ const c=$("f-code").value.trim(); if(!/^\d{6,8}$/.test(c)){st.textContent="업체 코드를 숫자 6~8자리로 정해 주세요.";return} AUTH.codes[S.biz.id]=c; ls.set("bw_codes",AUTH.codes); }
   const b=Object.assign({},S.biz,f,{updatedAt:now}); if(!b.createdAt)b.createdAt=now;
   if(!b.example){ st.textContent="저장하는 중입니다.";
     try{await store.saveBiz(b); delete b.isNew; $("f-code-wrap").hidden=true; if(S.cardDirty){await store.saveCard(b.id,S.card);S.cardDirty=false}}
@@ -1154,7 +1160,12 @@ async function initCons(view){
   if(cur&&[...$("c-biz").options].some(o=>o.value===cur))$("c-biz").value=cur;
   showCons(view);
 }
-async function showCons(view){ consView=view; ["voice","bench","admin","report"].forEach(k=>{$("view-"+k).hidden=k!==view;$("tab-"+k).setAttribute("aria-selected",k===view)});
+if($("btn-reset-code")) $("btn-reset-code").onclick=async()=>{ const st=$("reset-status"), id=$("c-biz").value, c=$("reset-code").value.trim();
+  if(!id||id==="example"){st.textContent="위에서 업체를 먼저 골라 주세요.";return}
+  if(!/^\d{6,8}$/.test(c)){st.textContent="새 코드를 숫자 6~8자리로 넣어 주세요.";return}
+  st.textContent="바꾸는 중입니다.";
+  try{ await api("resetCode",{id,code:c}); $("reset-code").value=""; st.textContent="새 코드로 바꿨습니다. 대표님께 새 코드를 알려 주세요." }catch(e){ st.textContent=errMsg(e) } };
+async function showCons(view){ consView=view; $("code-reset").hidden=!REMOTE; ["voice","bench","admin","report"].forEach(k=>{$("view-"+k).hidden=k!==view;$("tab-"+k).setAttribute("aria-selected",k===view)});
   $("c-biz").hidden=view==="admin";
   if(view==="admin") return renderAdmin(); if(view==="report") return loadReportForm();
   const id=$("c-biz").value; curVoice=null; try{ curVoice=await store.getVoice(id) }catch(e){} curVoice=fixVoice(curVoice);
