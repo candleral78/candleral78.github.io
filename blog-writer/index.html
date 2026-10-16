@@ -7,7 +7,6 @@
 <title>대표님 블로그 글쓰기</title>
 <style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script>
-/* ▼ Apps Script를 배포하고 받은 웹앱 주소를 아래 따옴표 안에 붙여 넣으세요. (https://script.google.com/macros/s/.../exec) */
 window.BW_API="https://script.google.com/macros/s/AKfycbwuvUpvxJJXEGFh9H6H96XOa_AvDOczqEfoDFpgRtbexX2Mme_dOsYSBgTWOrhui-AaHQ/exec";
 </script>
 </head>
@@ -473,7 +472,7 @@ const safeUrl=u=>/^https?:\/\//i.test(String(u||"").trim())?String(u).trim():"";
 let db=null, sample=null, downloads=null, imgLimit=0;
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 /* 정식 버전: window.BW_API(Apps Script 주소)가 있으면 서버에 저장하고 서버가 AI를 부릅니다. */
-const REMOTE=typeof window.BW_API==="string"&&/^https:\/\//.test(window.BW_API);
+const REMOTE=typeof window.BW_API==="string"&&/^(https:\/\/|http:\/\/localhost)/.test(window.BW_API);
 const AUTH={adminPw:"",codes:ls.get("bw_codes")||{}};
 const codeOf=id=>(id&&AUTH.codes[id])||"";
 async function api(action,payload){
