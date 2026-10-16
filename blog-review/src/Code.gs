@@ -11,8 +11,8 @@
  *   5) 네이버 블로그 검색 API   6) 네이버 검색광고 키워드 도구 API
  *
  * 설정은 [프로젝트 설정 > 스크립트 속성]에 넣습니다.
- *   SHEET_ID              (필수) 이 도구 전용 구글 시트의 ID
- *   ADMIN_PW              (필수) 화면에서 시험을 돌릴 때 쓰는 암호
+ *   SHEET_ID              (선택) 이 도구 전용 구글 시트의 ID. 시트에 붙은 스크립트면 비워 둡니다
+ *   ADMIN_PW              (화면 사용 시) 화면에서 시험을 돌릴 때 쓰는 암호
  *   NAVER_CLIENT_ID       (5번 시험) 네이버 개발자센터 애플리케이션 Client ID
  *   NAVER_CLIENT_SECRET   (5번 시험) 같은 애플리케이션 Client Secret
  *   SEARCHAD_API_KEY      (6번 시험) 검색광고 API 액세스라이선스
@@ -296,7 +296,12 @@ function runProbe_(t, write) {
 /* ---------- 구글 시트 ---------- */
 var ss_ = null;
 function sheet_(tab) {
-  if (!ss_) { var sid = prop_('SHEET_ID', ''); if (!sid) throw fail_('not_configured', 'SHEET_ID가 설정되지 않았습니다.'); ss_ = SpreadsheetApp.openById(sid); }
+  if (!ss_) {
+    var sid = prop_('SHEET_ID', '');
+    // 시트에 붙은 스크립트(시트 메뉴 확장 프로그램 > Apps Script)로 만들었으면 SHEET_ID 없이 그 시트를 씁니다.
+    ss_ = sid ? SpreadsheetApp.openById(sid) : SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss_) throw fail_('not_configured', 'SHEET_ID가 설정되지 않았습니다.');
+  }
   var sh = ss_.getSheetByName(tab);
   if (!sh) {
     sh = ss_.insertSheet(tab);

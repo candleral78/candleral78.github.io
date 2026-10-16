@@ -3,8 +3,10 @@
 // 키가 없으면 API 2종은 "건너뜀"으로 나옵니다(정상).
 import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto'; import { execFileSync } from 'child_process';
 
-const props = { SHEET_ID: 's', ADMIN_PW: 'admin1234' };
+// SHEET_ID 없이(시트에 붙은 스크립트처럼) 실행해 봅니다.
+const props = { ADMIN_PW: 'admin1234' };
 const sheets = {};
+const ss = { getSheetByName: n => sheets[n] || null, insertSheet: n => (sheets[n] = new Sheet()) };
 class Sheet {
   constructor() { this.rows = []; }
   getLastRow() { return this.rows.length; }
@@ -25,7 +27,7 @@ const ctx = {
   console, JSON, Math, Date, String, Number, Error, RegExp, encodeURIComponent,
   PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in props ? props[k] : null) }) },
   ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType() { return this; }, text: t }) },
-  SpreadsheetApp: { openById: () => ({ getSheetByName: n => sheets[n] || null, insertSheet: n => (sheets[n] = new Sheet()) }) },
+  SpreadsheetApp: { openById: () => ss, getActiveSpreadsheet: () => ss },
   Utilities: {
     formatDate: d => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', dateStyle: 'short', timeStyle: 'medium' }).format(d),
     base64Encode: b => Buffer.from(b).toString('base64'),
