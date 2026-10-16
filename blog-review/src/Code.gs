@@ -22,6 +22,7 @@
  */
 var TABS = ['probe'];
 var MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+var DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
 /** 시험 대상. 업체를 바꿔 시험하려면 여기만 고칩니다. */
 var PROBE_TARGET = {
@@ -229,11 +230,21 @@ function runProbe_(t, write) {
 
   var placeInfo = null;
   safe('플레이스', function () {
-    var r = get_('https://m.place.naver.com/place/' + t.placeId + '/home');
-    var p = r.code === 200 ? parsePlace_(r.text, t.placeId) : null;
+    // 모바일 주소가 막히면(429 등) 데스크톱 주소로 한 번 더 시도합니다.
+    var routes = [
+      { name: '모바일', url: 'https://m.place.naver.com/place/' + t.placeId + '/home', ua: MOBILE_UA },
+      { name: '데스크톱', url: 'https://pcmap.place.naver.com/place/' + t.placeId + '/home', ua: DESKTOP_UA }
+    ];
+    var tried = [], p = null, code = '';
+    for (var i = 0; i < routes.length && !p; i++) {
+      var r = get_(routes[i].url, { 'User-Agent': routes[i].ua });
+      code = r.code; tried.push(routes[i].name + ' ' + r.code);
+      p = r.code === 200 ? parsePlace_(r.text, t.placeId) : null;
+      if (p) p.route = routes[i].name;
+    }
     placeInfo = p;
-    rec('플레이스', !!(p && p.name), r.code,
-      p ? [p.name, p.category, p.roadAddress, p.phone].join(' / ') : '업체 정보를 찾지 못함', p);
+    rec('플레이스', !!(p && p.name), code,
+      (p ? [p.name, p.category, p.roadAddress, p.phone].join(' / ') : '업체 정보를 찾지 못함') + ' (시도: ' + tried.join(', ') + ')', p);
   });
 
   safe('블로그 RSS', function () {
