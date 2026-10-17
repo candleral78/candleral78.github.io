@@ -15,6 +15,8 @@ const browser = await chromium.launch(Object.assign({ env: { ...process.env, LAN
 try {
   const page = await browser.newPage({ viewport: { width: 1100, height: 900 }, acceptDownloads: true });
   const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  // 네이버 사진이 이 화면에서 막히는 경우(대표님 브라우저)를 흉내 냅니다 → 서버로 받아 넣어야 합니다.
+  await page.route(/pstatic\.net/, r => r.request().resourceType() === 'image' ? r.abort() : r.continue());
   await page.goto('http://localhost:8788/');
 
   console.log('== 들어가기');
@@ -53,6 +55,9 @@ try {
   await page.waitForFunction(() => { const f = document.querySelector('.nview'); return f && f.shadowRoot && f.shadowRoot.querySelectorAll('.br-no').length > 0; }, null, { timeout: 30000 }).catch(() => {});
   const boxes = await page.evaluate(() => { const f = document.querySelector('.nview'); return f && f.shadowRoot ? f.shadowRoot.querySelectorAll('.br-no').length : 0; });
   check('네이버 화면 위에 빨간 번호 상자 (' + boxes + '개)', boxes >= 2);
+  await page.waitForFunction(() => { const f = document.querySelector('.nview'); return f && [...f.shadowRoot.querySelectorAll('img')].some(i => i.src.startsWith('data:') && i.naturalWidth > 0); }, null, { timeout: 60000 }).catch(() => {});
+  const viaSrv = await page.evaluate(() => [...document.querySelector('.nview').shadowRoot.querySelectorAll('img')].filter(i => i.src.startsWith('data:') && i.naturalWidth > 0).length);
+  check('막힌 네이버 사진을 서버로 받아 표시 (' + viaSrv + '장)', viaSrv >= 3);
   check('먼저 고칠 것 3개', (await page.$$('.firsts li')).length === 3);
   check('추천 해시태그와 모두 복사', (await page.$$('.chips .chip')).length >= 5 && !!(await page.$('button.copy[data-copy^="#반포필즈수학"]')));
   check('AI 검색 대비 점검', (await page.$$('.aich li')).length === 3);

@@ -202,8 +202,8 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
   header.top,.tabs,.no-print,.only-edit,#reviewForm,.copy,.toolbar{display:none!important}
   .wrap{max-width:none;padding:0;gap:0} .sheet{border:0;padding:0;gap:16px;background:#fff}
   .glance{grid-template-columns:1.1fr 1fr;break-inside:avoid}
-  .split{display:contents} .cards{order:1} details.sec{order:2} .orig{order:3;position:static;width:430px;max-width:100%;break-before:page} .foot{order:4}
-  .orighead h3::after{content:" (부록)"} .origscroll,.printing .origscroll{height:auto!important;overflow:visible!important;border:1px solid #ccc;border-radius:6px;box-shadow:none}
+  .split{display:contents} .orig{order:1;position:static;width:430px;max-width:100%;margin:0 auto;break-after:page} .cards{order:2} details.sec{order:3} .foot{order:4}
+  .origscroll,.printing .origscroll{height:auto!important;overflow:visible!important;border:1px solid #ccc;border-radius:6px;box-shadow:none}
   .orighead{break-after:avoid}
   .card{break-inside:avoid;cursor:default} .card.off{display:none}
   details.sec{break-inside:auto} details.sec>summary h3::before{content:""}
@@ -453,7 +453,7 @@ function naverView(r){
   root.innerHTML=`${(r.viewCss||[]).map(u=>`<link rel="stylesheet" href="${esc(u)}">`).join("")}
   <style>:host{display:block;background:#fff;color:#111}.wrap{position:relative;padding:8px 14px 30px 38px;background:#fff}img{max-width:100%!important;height:auto!important}
   a{pointer-events:none;color:inherit}
-  .br-mark{box-shadow:inset 0 0 0 2.5px #d0162f!important;background-color:rgba(208,22,47,.07)!important;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .br-mark{padding:3px 6px!important;box-shadow:inset 0 0 0 2.5px #d0162f!important;background-color:rgba(208,22,47,.07)!important;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .br-mark.br-soft{box-shadow:inset 0 0 0 2px rgba(208,22,47,.75)!important;background-color:rgba(208,22,47,.04)!important}
   .br-mark img{opacity:.92}
   .br-no{display:inline-block;vertical-align:middle;margin:0 6px 2px 2px;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif!important;text-align:center;text-indent:0;pointer-events:auto;cursor:pointer;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -467,7 +467,9 @@ function naverView(r){
   root.querySelectorAll("button,.blog_authorArea,.blog_btnArea,.post_function_t1,.blog_category,.btn_buddyadd,.checkin_button_wrap").forEach(x=>x.remove());
   // 사진은 바로 불러오고, 못 불러오면 빈칸 대신 사진 자리를 보여 줍니다.
   root.querySelectorAll("img").forEach(i=>{ i.loading="eager"; i.referrerPolicy="no-referrer"; i.removeAttribute("data-lazy-src");
-    i.addEventListener("error",()=>{ if(i.dataset.retried||!/pstatic/.test(i.src)){ const ph=document.createElement("div"); ph.className="img-ph"; ph.textContent="[사진]"; i.replaceWith(ph); return } i.dataset.retried=1; i.src=i.src.replace(/\?type=\w+$/,"")+"?type=w773" }) });
+    i.addEventListener("error",()=>{ if(!/pstatic/.test(i.src)||i.dataset.viaServer){ const ph=document.createElement("div"); ph.className="img-ph"; ph.textContent="[사진]"; if(i.dataset.orig) ph.dataset.src=i.dataset.orig; i.replaceWith(ph); return }
+      // 네이버가 이 화면에서 사진을 막으면 서버에서 받아 넣습니다.
+      i.dataset.orig=i.dataset.orig||i.src; i.dataset.viaServer=1; viaServer(i) }) });
   const comps=[...root.querySelectorAll(".se-component")];
   function target(b){ const c=comps[b.ci]; if(!c) return null; if(b.type==="text"&&typeof b.pi==="number"){ const ps=[...c.querySelectorAll("p.se-text-paragraph")].filter(p=>p.textContent.replace(/\u200b/g,"").trim()); return ps[b.pi]||c } return c }
   function draw(){
@@ -595,8 +597,14 @@ async function printPdf(){
   window.print();
   document.title=t; document.body.classList.remove("printing"); ds.forEach((d,i)=>d.open=opened[i]); if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50);
 }
-/* PDF 파일을 바로 만들어 다운로드 폴더에 내려받습니다(인쇄 창 없음). 순서: 첫 장 요약 → 의견 카드 → 키워드·AI 검색·다음 글·체크리스트 → 원문(부록). */
-async function toDataImages(imgs){
+const IMGQ=[]; let imgT=null;
+function viaServer(i){ IMGQ.push(i); clearTimeout(imgT); imgT=setTimeout(async()=>{ const list=IMGQ.splice(0), urls=[...new Set(list.map(x=>x.dataset.orig))], map={};
+  for(let k=0;k<urls.length;k+=8){ try{ Object.assign(map,await api("imageData",{urls:urls.slice(k,k+8)})) }catch(e){} }
+  list.forEach(x=>{ if(map[x.dataset.orig]){ x.removeAttribute("srcset"); x.src=map[x.dataset.orig] } else x.dispatchEvent(new Event("error")) }) },300) }
+/* PDF 파일을 바로 만들어 다운로드 폴더에 내려받습니다(인쇄 창 없음). 순서: 첫 장 요약 → 원문에 표시 → 의견 카드 → 키워드·AI 검색·다음 글·체크리스트. */
+async function toDataImages(imgs,doc){
+  const phs=[...(doc||document).querySelectorAll(".img-ph[data-src]")]; phs.forEach(ph=>{ const im=(doc||document).createElement("img"); im.dataset.src=ph.dataset.src; im.style.cssText="width:100%;height:auto;display:block"; ph.replaceWith(im); imgs.push(im) });
+  imgs=imgs.filter(i=>!/^data:/.test(i.src||""));
   const urls=[...new Set(imgs.map(i=>i.dataset.src||i.currentSrc||i.src).filter(u=>/pstatic\.net/.test(u)))], map={};
   for(let k=0;k<urls.length;k+=8){ try{ Object.assign(map,await api("imageData",{urls:urls.slice(k,k+8)})) }catch(e){} }
   imgs.forEach(i=>{ const u=i.dataset.src||i.currentSrc||i.src; if(map[u]){ i.removeAttribute("crossorigin"); i.removeAttribute("srcset"); i.src=map[u] } else if(/pstatic\.net/.test(u)){ const ph=document.createElement("div"); ph.className="img-ph"; ph.textContent="[사진]"; ph.style.cssText="border:1px dashed #bbb;border-radius:6px;padding:14px 10px;text-align:center;color:#777;font:13px sans-serif;background:#fafafa"; i.replaceWith(ph) } });
@@ -611,7 +619,7 @@ async function origCanvas(){
   root.querySelectorAll("style").forEach(n=>{ const st=d.createElement("style"); st.textContent=n.textContent.replace(/:host/g,"body"); d.head.appendChild(st) });
   const w=root.querySelector(".wrap"); d.body.appendChild(d.importNode(w,true));
   await Promise.race([Promise.all(links),new Promise(ok=>setTimeout(ok,6000))]);
-  await toDataImages([...d.querySelectorAll("img")]);
+  await toDataImages([...d.querySelectorAll("img")],d);
   ifr.style.height=Math.max(900,d.body.scrollHeight)+"px"; await new Promise(ok=>setTimeout(ok,200));
   const h=d.body.scrollHeight, sc=Math.min(2,30000/Math.max(1,h));
   try{ return await html2canvas(d.body,{scale:sc,backgroundColor:"#ffffff",width:430,height:h,windowWidth:430,windowHeight:h,useCORS:true}) } finally{ ifr.remove() }
@@ -623,27 +631,28 @@ async function downloadPdf(){
   const sheet=$("#sheet"), ds=$$("#sheet details"), opened=ds.map(d=>d.open); ds.forEach(d=>d.open=true);
   const name=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}.pdf`.replace(/[\\/:*?"<>|]/g,"_");
   try{
-    sheet.classList.add("exporting"); sheet.style.width="760px";
-    await toDataImages($$("#sheet .cards img, #sheet details img, #sheet .glance img"));
-    const W=760, bg="#ffffff", skip=el=>!!(el.classList&&(el.classList.contains("no-export")||el.classList.contains("copy")||el.classList.contains("only-edit")||el.classList.contains("keep")));
+    sheet.classList.add("exporting"); sheet.style.width="840px";
+    await toDataImages($$("#sheet .cards img, #sheet details img, #sheet .glance img"),sheet);
+    const W=840, bg="#ffffff", skip=el=>!!(el.classList&&(el.classList.contains("no-export")||el.classList.contains("copy")||el.classList.contains("only-edit")||el.classList.contains("keep")));
     const shot=el=>html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,windowWidth:1100,ignoreElements:skip});
     const pdf=new jspdf.jsPDF({unit:"mm",format:"a4",compress:true}), PW=210, PH=297, M=11, TOP=12, BOT=12, CW=PW-2*M, k=CW/W;
     let y=TOP, any=false;
     const newPage=()=>{ pdf.addPage(); y=TOP };
     function put(c,cssW,gap,keep){
       if(!c||!c.width||!c.height) return; const wMm=cssW*k, hMm=c.height*(wMm/c.width), pxPerMm=c.height/hMm;
-      if(hMm<=PH-TOP-BOT||keep){ if(y+hMm>PH-BOT&&y>TOP) newPage(); pdf.addImage(c.toDataURL("image/jpeg",.9),"JPEG",M,y,wMm,Math.min(hMm,PH-TOP-BOT)); y+=hMm+gap; any=true; return }
+      if(hMm<=PH-TOP-BOT||keep){ if(y+hMm>PH-BOT&&y>TOP) newPage(); pdf.addImage(c.toDataURL("image/jpeg",.9),"JPEG",M+(CW-wMm)/2,y,wMm,Math.min(hMm,PH-TOP-BOT)); y+=hMm+gap; any=true; return }
       let from=0; while(from<c.height){ let avail=PH-BOT-y; if(avail<25){ newPage(); avail=PH-BOT-y } const hp=Math.min(c.height-from,Math.floor(avail*pxPerMm));
         const part=document.createElement("canvas"); part.width=c.width; part.height=hp; const g=part.getContext("2d"); g.fillStyle=bg; g.fillRect(0,0,part.width,hp); g.drawImage(c,0,from,c.width,hp,0,0,c.width,hp);
-        pdf.addImage(part.toDataURL("image/jpeg",.9),"JPEG",M,y,wMm,hp/pxPerMm); y+=hp/pxPerMm; from+=hp; if(from<c.height) newPage() }
+        pdf.addImage(part.toDataURL("image/jpeg",.9),"JPEG",M+(CW-wMm)/2,y,wMm,hp/pxPerMm); y+=hp/pxPerMm; from+=hp; if(from<c.height) newPage() }
       y+=gap; any=true }
     for(const el of [sheet.querySelector(".masthead"),$("#opinion"),sheet.querySelector(".glance")]) if(el) put(await shot(el),W,4);
-    const ch=sheet.querySelector(".cards-h"); if(ch) put(await shot(ch),W,2);
+    // 원문에 표시(빨간 번호) → 의견 카드 → 키워드·AI 검색·다음 글·체크리스트 순서
+    const oc=await origCanvas().catch(()=>null);
+    if(oc){ y+=3; const oh=sheet.querySelector(".orighead"); if(oh) put(await shot(oh),W,2); put(oc,560,4) }
+    const ch=sheet.querySelector(".cards-h"); if(ch){ y+=4; put(await shot(ch),W,2) }
     for(const el of $$("#sheet .card:not(.off)")) put(await shot(el),W,4);
     for(const el of $$("#sheet details.sec")) put(await shot(el),W,4);
     const ft=sheet.querySelector(".foot"); if(ft) put(await shot(ft),W,0);
-    const oc=await origCanvas().catch(()=>null);
-    if(oc){ newPage(); const oh=sheet.querySelector(".orighead"); if(oh) put(await shot(oh),W,2); put(oc,430,4) }
     if(!any) throw new Error("빈 PDF");
     const url=URL.createObjectURL(pdf.output("blob")), a=document.createElement("a"); a.href=url; a.download=name; a.style.display="none"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
     status($("#shStatus"),`다운로드 폴더에 "${name}" 파일로 내려받았습니다.`);
