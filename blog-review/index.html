@@ -523,7 +523,7 @@ function renderSheet(){
   const sumBox=(r.summaryBox||[]).filter(Boolean), faq=r.faq||[];
   $("#result").innerHTML=`
   <div class="row no-print toolbar">
-    <button class="btn" id="pdfBtn">PDF로 저장</button>
+    <button class="btn" id="pdfBtn">PDF 다운로드</button>
     <button class="btn ghost small" id="edBtn">${EDIT?"고치기 끝내고 저장":"문장 고치기"}</button>
     <span class="status" id="shStatus">${EDIT?"카드 문장을 눌러 고치고, 보내지 않을 카드는 체크를 빼 주세요.":"보내기 전에 표현을 바꾸고 싶을 때만 문장 고치기를 누르시면 됩니다."}</span>
   </div>
@@ -607,7 +607,7 @@ async function exportPng(){
     sheet.classList.remove("exporting"); sheet.style.width=""; $$("#sheet details").forEach((d,i)=>d.open=opened[i]);
     const a=document.createElement("a"); a.href=canvas.toDataURL("image/png"); a.download=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}.png`; a.click();
     status($("#shStatus"),"이미지를 저장했습니다.");
-  }catch(e){ sheet.classList.remove("exporting"); sheet.style.width=""; status($("#shStatus"),"이미지를 만들지 못했습니다. PDF로 저장해 주세요.",true) }
+  }catch(e){ sheet.classList.remove("exporting"); sheet.style.width=""; status($("#shStatus"),"이미지를 만들지 못했습니다. PDF로 내려받아 주세요.",true) }
   if(wasEdit){ EDIT=true; renderSheet() }
 }
 

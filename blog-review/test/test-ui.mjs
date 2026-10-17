@@ -66,7 +66,7 @@ try {
   await page.screenshot({ path: shot('2-첨삭지'), fullPage: true });
 
   console.log('== 문장 고치기 (끝내면 자동 저장)');
-  check('버튼은 PDF로 저장·문장 고치기 둘', !(await page.$('#pngBtn')) && !(await page.$('#saveBtn')) && !!(await page.$('#pdfBtn')));
+  check('버튼은 PDF 다운로드·문장 고치기 둘', !(await page.$('#pngBtn')) && !(await page.$('#saveBtn')) && !!(await page.$('#pdfBtn')));
   await page.click('#edBtn');
   await page.waitForSelector('.comment[contenteditable=true]');
   await page.evaluate(() => { document.querySelector('#card-1 .comment').innerText = '대표님, 지도를 학원으로 다시 선택해 주세요.'; });
