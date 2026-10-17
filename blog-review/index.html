@@ -316,6 +316,7 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -576,7 +577,7 @@ function renderSheet(){
   $$(".card").forEach(c=>c.addEventListener("click",e=>{ if(e.target.closest("button,label,a,[contenteditable=true]")) return; if(CUR._frame&&CUR._frame._goto) CUR._frame._goto(c.dataset.no) }));
   $$("[data-go]").forEach(a=>a.addEventListener("click",()=>{ if(CUR._frame&&CUR._frame._goto) CUR._frame._goto(a.dataset.go) }));
   $("#edBtn").onclick=async()=>{ collectEdits(); const was=EDIT; EDIT=!EDIT; renderSheet(); if(was) await saveEdits() };
-  $("#pdfBtn").onclick=printPdf;
+  $("#pdfBtn").onclick=downloadPdf;
   $$(".copy").forEach(b=>b.onclick=async e=>{ e.stopPropagation(); try{ await navigator.clipboard.writeText(b.dataset.copy||""); b.textContent="복사함" }catch(err){ b.textContent="복사 안 됨" } });
   $$(".keep").forEach(c=>c.onchange=()=>{ const f=F.find(x=>x.no==c.dataset.no); f.show=c.checked; c.closest(".card").classList.toggle("off",!c.checked) });
 }
@@ -593,6 +594,61 @@ async function printPdf(){
   await new Promise(ok=>setTimeout(ok,300));
   window.print();
   document.title=t; document.body.classList.remove("printing"); ds.forEach((d,i)=>d.open=opened[i]); if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50);
+}
+/* PDF 파일을 바로 만들어 다운로드 폴더에 내려받습니다(인쇄 창 없음). 순서: 첫 장 요약 → 의견 카드 → 키워드·AI 검색·다음 글·체크리스트 → 원문(부록). */
+async function toDataImages(imgs){
+  const urls=[...new Set(imgs.map(i=>i.dataset.src||i.currentSrc||i.src).filter(u=>/pstatic\.net/.test(u)))], map={};
+  for(let k=0;k<urls.length;k+=8){ try{ Object.assign(map,await api("imageData",{urls:urls.slice(k,k+8)})) }catch(e){} }
+  imgs.forEach(i=>{ const u=i.dataset.src||i.currentSrc||i.src; if(map[u]){ i.removeAttribute("crossorigin"); i.removeAttribute("srcset"); i.src=map[u] } else if(/pstatic\.net/.test(u)){ const ph=document.createElement("div"); ph.className="img-ph"; ph.textContent="[사진]"; ph.style.cssText="border:1px dashed #bbb;border-radius:6px;padding:14px 10px;text-align:center;color:#777;font:13px sans-serif;background:#fafafa"; i.replaceWith(ph) } });
+  await Promise.race([Promise.all(imgs.filter(i=>i.isConnected).map(i=>i.complete?0:new Promise(ok=>{i.onload=i.onerror=ok}))),new Promise(ok=>setTimeout(ok,10000))]);
+}
+async function origCanvas(){
+  const host=$(".nview"); if(!host||!host.shadowRoot) return null;
+  const root=host.shadowRoot, ifr=document.createElement("iframe");
+  ifr.style.cssText="position:fixed;left:-20000px;top:0;width:430px;height:900px;border:0;background:#fff"; document.body.appendChild(ifr);
+  const d=ifr.contentDocument; d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#fff;width:430px"></body></html>'); d.close();
+  const links=[...root.querySelectorAll('link[rel=stylesheet]')].map(n=>{ const l=d.importNode(n,true); d.head.appendChild(l); return new Promise(ok=>{ l.onload=l.onerror=ok }) });
+  root.querySelectorAll("style").forEach(n=>{ const st=d.createElement("style"); st.textContent=n.textContent.replace(/:host/g,"body"); d.head.appendChild(st) });
+  const w=root.querySelector(".wrap"); d.body.appendChild(d.importNode(w,true));
+  await Promise.race([Promise.all(links),new Promise(ok=>setTimeout(ok,6000))]);
+  await toDataImages([...d.querySelectorAll("img")]);
+  ifr.style.height=Math.max(900,d.body.scrollHeight)+"px"; await new Promise(ok=>setTimeout(ok,200));
+  const h=d.body.scrollHeight, sc=Math.min(2,30000/Math.max(1,h));
+  try{ return await html2canvas(d.body,{scale:sc,backgroundColor:"#ffffff",width:430,height:h,windowWidth:430,windowHeight:h,useCORS:true}) } finally{ ifr.remove() }
+}
+async function downloadPdf(){
+  if(!window.jspdf||!window.html2canvas){ status($("#shStatus"),"PDF 도구를 불러오지 못해 인쇄 창으로 엽니다. 대상에서 \"PDF로 저장\"을 골라 주세요.",true); return printPdf() }
+  if(EDIT){ collectEdits(); EDIT=false; renderSheet(); await saveEdits() }
+  const btn=$("#pdfBtn"); btn.disabled=true; status($("#shStatus"),"PDF를 만드는 중입니다. 사진이 많으면 30초쯤 걸립니다…");
+  const sheet=$("#sheet"), ds=$$("#sheet details"), opened=ds.map(d=>d.open); ds.forEach(d=>d.open=true);
+  const name=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}.pdf`.replace(/[\\/:*?"<>|]/g,"_");
+  try{
+    sheet.classList.add("exporting"); sheet.style.width="760px";
+    await toDataImages($$("#sheet .cards img, #sheet details img, #sheet .glance img"));
+    const W=760, bg="#ffffff", skip=el=>!!(el.classList&&(el.classList.contains("no-export")||el.classList.contains("copy")||el.classList.contains("only-edit")||el.classList.contains("keep")));
+    const shot=el=>html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,windowWidth:1100,ignoreElements:skip});
+    const pdf=new jspdf.jsPDF({unit:"mm",format:"a4",compress:true}), PW=210, PH=297, M=11, TOP=12, BOT=12, CW=PW-2*M, k=CW/W;
+    let y=TOP, any=false;
+    const newPage=()=>{ pdf.addPage(); y=TOP };
+    function put(c,cssW,gap,keep){
+      if(!c||!c.width||!c.height) return; const wMm=cssW*k, hMm=c.height*(wMm/c.width), pxPerMm=c.height/hMm;
+      if(hMm<=PH-TOP-BOT||keep){ if(y+hMm>PH-BOT&&y>TOP) newPage(); pdf.addImage(c.toDataURL("image/jpeg",.9),"JPEG",M,y,wMm,Math.min(hMm,PH-TOP-BOT)); y+=hMm+gap; any=true; return }
+      let from=0; while(from<c.height){ let avail=PH-BOT-y; if(avail<25){ newPage(); avail=PH-BOT-y } const hp=Math.min(c.height-from,Math.floor(avail*pxPerMm));
+        const part=document.createElement("canvas"); part.width=c.width; part.height=hp; const g=part.getContext("2d"); g.fillStyle=bg; g.fillRect(0,0,part.width,hp); g.drawImage(c,0,from,c.width,hp,0,0,c.width,hp);
+        pdf.addImage(part.toDataURL("image/jpeg",.9),"JPEG",M,y,wMm,hp/pxPerMm); y+=hp/pxPerMm; from+=hp; if(from<c.height) newPage() }
+      y+=gap; any=true }
+    for(const el of [sheet.querySelector(".masthead"),$("#opinion"),sheet.querySelector(".glance")]) if(el) put(await shot(el),W,4);
+    const ch=sheet.querySelector(".cards-h"); if(ch) put(await shot(ch),W,2);
+    for(const el of $$("#sheet .card:not(.off)")) put(await shot(el),W,4);
+    for(const el of $$("#sheet details.sec")) put(await shot(el),W,4);
+    const ft=sheet.querySelector(".foot"); if(ft) put(await shot(ft),W,0);
+    const oc=await origCanvas().catch(()=>null);
+    if(oc){ newPage(); const oh=sheet.querySelector(".orighead"); if(oh) put(await shot(oh),W,2); put(oc,430,4) }
+    if(!any) throw new Error("빈 PDF");
+    const url=URL.createObjectURL(pdf.output("blob")), a=document.createElement("a"); a.href=url; a.download=name; a.style.display="none"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
+    status($("#shStatus"),`다운로드 폴더에 "${name}" 파일로 내려받았습니다.`);
+  }catch(e){ console.error(e); status($("#shStatus"),"PDF를 바로 만들지 못해 인쇄 창으로 엽니다. 대상에서 \"PDF로 저장\"을 골라 주세요.",true); setTimeout(printPdf,400) }
+  finally{ sheet.classList.remove("exporting"); sheet.style.width=""; ds.forEach((d,i)=>d.open=opened[i]); btn.disabled=false; if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50) }
 }
 async function exportPng(){
   collectEdits(); const wasEdit=EDIT; if(EDIT){ EDIT=false; renderSheet() }
