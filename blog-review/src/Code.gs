@@ -361,7 +361,17 @@ function parseManuscript_(text, title) {
     if ((m = /^\[(인용|말풍선|강조)\s*:\s*([^\]]*)\]$/.exec(l))) { flush(); blocks.push({ type: 'quote', text: m[2].trim() }); return; }
     if ((m = /^\[링크\s*:\s*([^\]]*)\]$/.exec(l))) { flush(); blocks.push({ type: 'link', url: m[1].trim(), planned: true }); return; }
     if ((m = /^(#{1,3})\s+(.+)$/.exec(l)) || (m = /^■\s*(.+)$/.exec(l))) { flush(); blocks.push({ type: 'heading', text: (m[2] || m[1]).trim() }); return; }
-    buf.push(l); flush();
+    if ((m = /^\[체크리스트\s*:\s*([^\]]*)\]$/.exec(l))) { flush(); blocks.push({ type: 'list', text: m[1].split('/').map(function (x) { return x.trim(); }).filter(String).join(' / ') }); return; }
+    if (/^\|.*\|$/.test(l)) { // 표 줄은 앞 줄과 이어 하나의 표로
+      var cells = l.replace(/^\||\|$/g, '').split('|').map(function (x) { return x.trim(); });
+      if (/^[-:\s|]+$/.test(l)) return;
+      var last = blocks[blocks.length - 1]; flush();
+      if (last && last.type === 'table' && !buf.length) last.text += ' | ' + cells.join(' | '), last.rows++;
+      else blocks.push({ type: 'table', text: cells.join(' | '), rows: 1 });
+      return;
+    }
+    if ((m = /^\*\*(.+)\*\*$/.exec(l))) { flush(); blocks.push({ type: 'text', text: m[1].trim(), bold: true }); return; }
+    buf.push(l.replace(/\*\*([^*]+)\*\*/g, '$1')); flush();
   });
   flush();
   return { blocks: blocks, links: blocks.filter(function (b) { return b.type === 'link'; }).map(function (b) { return b.url; }) };
@@ -431,8 +441,14 @@ function parseJson_(t) {
 }
 
 /* ---------- 기계 검사 ---------- */
+/* ===== 공통 기준표 (글쓰기 앱 + 검수기) — shared/블로그_공통기준표.md 와 같은 내용 ===== */
+// 쓰지 않는 표현(글쓰기 앱 BANNED): 있으면 '꼭 고쳐 주세요'
+var BANNED_WORDS = ['완치', '100%', '무조건', '부작용 없', '부작용이 없', '최고의', '최상의', '유일한', '1위', '즉시 효과', '효과 보장', '보장합니다', '치료 효과', '기적', '만병', '특효', '최저가', '세계 최초', '국내 최초'];
+// AI가 쓴 것 같은 문장(글쓰기 앱 AIPH): 있으면 '권해 드려요'
+var AI_PHRASES = ['도움을 드리겠습니다', '도움이 되셨길', '완벽한', '많은 분들이 인정', '이 글에서는', '알아보겠습니다', '살펴보겠습니다', '소개해 드리겠습니다'];
+var STD = { minChars: 1500, targetChars: 1700, headingsMin: 3, headingsMax: 5, sentencesPerHeading: 5, mainKwMin: 1, mainKwMax: 8, minPhotos: 5, tagsMin: 8, tagsMax: 15 };
 var CAUTION_WORDS = {
-  '공통': ['최고', '최초', '유일', '100%', '완벽', '무조건', '보장', '1위', '최저가'],
+  '공통': ['최고', '최초', '유일', '완벽', '보장', '1위'],
   '학원·교육': ['합격 보장', '성적 보장', '100% 합격', '무조건 오르', '반드시 오르', '전원 합격'],
   '의료·미용': ['완치', '부작용 없', '부작용이 없', '통증 없', '효과 보장', '영구', '치료'],
   '음식점·식품': ['면역력', '치료', '다이어트 효과', '독소 배출', '항암'],
@@ -464,7 +480,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
   var maps = B.filter(function (b) { return b.type === 'map'; });
   var allText = textOf_(B).join(' ');
   var firstTextIdx = []; for (var i = 0; i < B.length && firstTextIdx.length < 3; i++) if (B[i].type === 'text') firstTextIdx.push(i);
-  var lastTexts = []; for (var j = B.length - 1; j >= 0 && lastTexts.length < 3; j--) if (B[j].type === 'text') lastTexts.unshift(j);
+  var lastTexts = []; for (var j = B.length - 1; j >= 0 && lastTexts.length < 3; j--) if (B[j].type === 'text' && !/^작성일/.test(B[j].text)) lastTexts.unshift(j);
   function add(f) { f.id = 'm' + (F.length + 1); f.source = '기계'; F.push(f); return f; }
   function ev(label, value, link) { return { label: label, value: value, at: at, link: link || '' }; }
   var guide = function (k) { return rules[k] && rules[k].level; };
@@ -515,10 +531,16 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
   if (names.length) {
     var head = [title].concat(firstTextIdx.slice(0, 2).map(function (x) { return B[x].text; })).join(' ');
     var hit = names.some(function (n) { return nsp_(head).indexOf(nsp_(n)) >= 0; });
-    if (!hit) add({
-      area: '검색 적합성', status: '수정 필요', title: '상호가 제목·첫 문단에 없음', blocks: [titleIdx].filter(function (x) { return x >= 0; }),
-      comment: '제목과 첫 문단에 "' + names[0] + '"이 없습니다. 상호를 검색하신 분이 이 글을 우리 가게 글로 알아보기 어렵습니다. 제목이나 첫 문장에 상호를 한 번 넣어 주세요.',
-      quote: title, evidence: [ev('측정', '제목·첫 문단 2개에서 "' + names.join('", "') + '" 0회'), ev('기준', '핵심 키워드(상호): 모든 글 제목 또는 첫 문단에 1회')]
+    var inBody = names.some(function (n) { return nsp_(allText).indexOf(nsp_(n)) >= 0; });
+    if (!inBody) add({
+      area: '검색 적합성', status: '수정 필요', title: '본문에 상호가 없음', blocks: [titleIdx].filter(function (x) { return x >= 0; }),
+      comment: '글 어디에도 "' + names[0] + '"이 없습니다. 글을 읽은 분이 어느 가게 이야기인지 알 수 없고, 상호를 검색했을 때도 이 글이 이어지지 않습니다. 첫 문단에 상호를 한 번 넣어 주세요.',
+      quote: title, evidence: [ev('측정', '본문 전체에서 "' + names.join('", "') + '" 0회'), ev('기준', '공통 기준표 · 상호를 본문에 넣기')]
+    });
+    else if (!hit) add({
+      area: '검색 적합성', status: '권장', title: '상호가 제목·첫 문단에 없음', blocks: [titleIdx].filter(function (x) { return x >= 0; }),
+      comment: '상호가 본문 뒤쪽에만 있습니다. 제목이나 첫 문단에 "' + names[0] + '"을 한 번 넣으시면 상호를 검색하신 분이 우리 가게 글인 줄 바로 알아봅니다.',
+      quote: title, evidence: [ev('측정', '제목·첫 문단 2개에서 0회, 본문에는 있음'), ev('기준', '공통 기준표 · 상호는 제목 또는 첫 문단에 1회')]
     });
   }
 
@@ -531,7 +553,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     var inTitle = nsp_(title).indexOf(nsp_(k.kw)) >= 0, n = countIn_(body, k.kw), fi = firstBlockWith_(B, k.kw);
     return { kw: k.kw, type: k.type, inTitle: inTitle, count: n, firstBlock: fi, where: inTitle ? '제목' + (n ? ' · 본문 ' + n + '회' : '') : n ? '본문 ' + n + '회' : '없음' };
   });
-  var maxRepeat = (rules.maxRepeat && +rules.maxRepeat.value) || 10;
+  var maxRepeat = (rules.maxRepeat && +rules.maxRepeat.value) || STD.mainKwMax;
   keywordTable.forEach(function (k) {
     if (k.count > maxRepeat) add({
       area: '검색 적합성', status: '권장', title: '같은 키워드 반복', blocks: [],
@@ -553,10 +575,32 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
 
   // 7. 주의 표현
   var words = (CAUTION_WORDS['공통'] || []).concat(CAUTION_WORDS[biz.industry] || []).concat(biz.cautionWords || []);
-  var cautionHits = [];
+  var cautionHits = [], bannedHits = [], aiHits = [];
+  B.forEach(function (b, bi) {
+    if (!b.text || b.type === 'title' && false) return;
+    BANNED_WORDS.forEach(function (w) { if (nsp_(b.text).indexOf(nsp_(w)) >= 0 && !bannedHits.some(function (h) { return h.w === w; })) bannedHits.push({ w: w, bi: bi }); });
+    AI_PHRASES.forEach(function (w) { if (nsp_(b.text).indexOf(nsp_(w)) >= 0 && !aiHits.some(function (h) { return h.w === w; })) aiHits.push({ w: w, bi: bi }); });
+  });
   B.forEach(function (b, bi) {
     if (!b.text) return;
-    words.forEach(function (w) { if (nsp_(b.text).indexOf(nsp_(w)) >= 0 && !cautionHits.some(function (h) { return h.w === w; })) cautionHits.push({ w: w, bi: bi }); });
+    words.forEach(function (w) {
+      if (nsp_(b.text).indexOf(nsp_(w)) < 0 || cautionHits.some(function (h) { return h.w === w; })) return;
+      if (bannedHits.some(function (h) { return nsp_(h.w).indexOf(nsp_(w)) >= 0 || nsp_(w).indexOf(nsp_(h.w)) >= 0; })) return;
+      cautionHits.push({ w: w, bi: bi });
+    });
+  });
+  cautionHits = cautionHits.filter(function (h) { return !cautionHits.some(function (o) { return o !== h && o.w.length > h.w.length && nsp_(o.w).indexOf(nsp_(h.w)) >= 0; }); });
+  bannedHits.slice(0, 5).forEach(function (h) {
+    add({
+      area: '표시', status: '수정 필요', title: '쓰지 않는 표현 "' + h.w + '"', blocks: [h.bi], quote: h.w,
+      comment: '"' + h.w + '"는 효과나 순위를 장담하는 표현이라 과장 광고로 문제가 될 수 있고, 손님도 광고 문구로 받아들입니다. 대표님이 직접 본 것이나 손님이 한 말로 바꿔 주세요.',
+      evidence: [ev('기준', '공통 기준표 · 쓰지 않는 표현(표시광고법 거짓·과장 광고)')]
+    });
+  });
+  if (aiHits.length) add({
+    area: '품질', status: '권장', title: 'AI가 쓴 것 같은 문장', blocks: aiHits.slice(0, 3).map(function (h) { return h.bi; }), quote: aiHits[0].w,
+    comment: '"' + aiHits.map(function (h) { return h.w; }).slice(0, 3).join('", "') + '" 같은 말은 안내문이나 AI가 쓴 글처럼 읽힙니다. 대표님이 평소 손님께 하시는 말투로 바꿔 주시면 글이 훨씬 믿음직해 보입니다.',
+    evidence: [ev('기준', '공통 기준표 · AI 같은 문장')]
   });
   cautionHits.slice(0, 5).forEach(function (h) {
     add({
@@ -623,10 +667,68 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     suggestion: title.replace(/\s{2,}/g, ' '), evidence: [ev('측정', '연속 빈칸 ' + (/\s{3,}/.exec(title)[0].length) + '칸')]
   });
 
+  // 13-2. 글 구조 — 공통 기준표(글쓰기 앱 규칙 1~7, 10, 15)
+  var heads = []; B.forEach(function (b, bi) { if (b.type === 'heading' || b.bold && b.type === 'text' && /[?？]$/.test(b.text)) heads.push(bi); });
+  if (!(src === 'capture' && doc.partial) && chars >= 600) {
+    if (heads.length < STD.headingsMin || heads.length > STD.headingsMax) add({
+      area: '품질', status: '권장', title: '소제목 수', blocks: heads.slice(0, 1),
+      comment: '소제목이 ' + heads.length + '개입니다. 휴대폰으로 읽는 분이 필요한 부분을 바로 찾도록 손님이 물을 법한 질문으로 소제목을 ' + STD.headingsMin + '~' + STD.headingsMax + '개 두시기를 권해 드립니다.' + (linkSrc && !heads.length ? ' 네이버 에디터의 "소제목" 서식이나 인용구로 넣으시면 됩니다.' : ''),
+      evidence: [ev('측정', '소제목 ' + heads.length + '개'), ev('기준', '공통 기준표 · 소제목 ' + STD.headingsMin + '~' + STD.headingsMax + '개')]
+    });
+    var qh = heads.filter(function (bi) { return /[?？]\s*$|까요|나요|인가요|할까|일까|은요|는요/.test(B[bi].text || ''); }).length;
+    if (heads.length && qh < Math.ceil(heads.length / 2)) add({
+      area: '검색 적합성', status: '권장', title: '질문형 소제목', blocks: heads.filter(function (bi) { return !/[?？]\s*$|까요|나요|인가요|할까|일까|은요|는요/.test(B[bi].text || ''); }).slice(0, 2),
+      comment: '소제목 ' + heads.length + '개 중 질문 형태가 ' + qh + '개입니다. 검색창에 치는 말과 같은 질문으로 바꾸시면 검색과 AI 답변에 함께 잡히기 쉽습니다. 예: "수업은 어떻게 진행되나요?"',
+      evidence: [ev('측정', '질문형 ' + qh + ' / 전체 ' + heads.length), ev('기준', '공통 기준표 · 소제목 절반 이상 질문형')]
+    });
+    var thin = [];
+    heads.forEach(function (hi, k) {
+      var end = k + 1 < heads.length ? heads[k + 1] : B.length, n = 0;
+      for (var x = hi + 1; x < end; x++) if (B[x].type === 'text' && !/^작성일/.test(B[x].text)) n += (B[x].text.match(/[.!?。]|다(\s|$)|요(\s|$)/g) || []).length || 1;
+      if (n < STD.sentencesPerHeading) thin.push({ bi: hi, n: n });
+    });
+    if (thin.length) add({
+      area: '품질', status: '권장', title: '소제목 아래 내용이 짧음', blocks: thin.slice(0, 3).map(function (t) { return t.bi; }),
+      comment: '소제목 ' + thin.length + '곳 아래 문장이 ' + STD.sentencesPerHeading + '문장보다 적습니다(' + thin.map(function (t) { return t.n + '문장'; }).join(', ') + '). 질문에 대한 답 → 이유 → 우리 가게 방식 → 손님 상황별 조건 → 예약·방문 안내 순서로 채우시면 좋겠습니다.',
+      evidence: [ev('기준', '공통 기준표 · 소제목마다 ' + STD.sentencesPerHeading + '문장 이상')]
+    });
+    var hasTable = B.some(function (b) { return b.type === 'table'; }), hasList = B.some(function (b) { return b.type === 'list'; });
+    var hasFaq = B.filter(function (b) { return b.text && /^Q[.．\s]/.test(b.text); }).length >= 2;
+    if (!hasTable && !hasFaq && !hasList) add({
+      area: '검색 적합성', status: '권장', title: '표·묻고 답하기 없음', blocks: [],
+      comment: '가격·절차·선택 기준을 정리한 표나 묻고 답하기(Q/A)가 없습니다. 손님이 비교할 때 가장 먼저 보는 부분이고 AI 검색도 이런 정리를 잘 가져갑니다. 표 하나나 Q/A 3개를 넣어 주시면 좋겠습니다.',
+      evidence: [ev('측정', '표 0 · 묻고 답하기 0 · 체크리스트 0'), ev('기준', '공통 기준표 · 표 또는 묻고 답하기 1개 이상')]
+    });
+    // 첫 문단 결론: 첫 소제목 전의 글
+    var firstHead = heads.length ? heads[0] : B.length, lead = [];
+    for (var y = 0; y < firstHead; y++) if (B[y].type === 'text') lead.push(B[y].text);
+    var leadText = lead.join(' ');
+    if (lead.length && (/^(안녕하세요|안녕하십니까|오늘은|날씨|이 글에서는)/.test(lead[0]) || nsp_(leadText).length < 50)) add({
+      area: '검색 적합성', status: '권장', title: '첫 문단에 결론', blocks: [B.indexOf(B.filter(function (b) { return b.type === 'text'; })[0])], quote: lead[0].slice(0, 20),
+      comment: '글이 ' + (/^안녕/.test(lead[0]) ? '인사말로' : '짧은 도입으로') + ' 시작합니다. 검색해서 들어온 분은 첫 두세 문장에서 답을 찾고 나갈지 정합니다. 제목의 질문에 대한 결론을 첫 문장에 먼저 써 주세요.',
+      evidence: [ev('측정', '첫 소제목 전 글 ' + nsp_(leadText).length + '자'), ev('기준', '공통 기준표 · 첫 문단 두세 문장 안에 결론')]
+    });
+  }
+  // 메인 키워드(이번 글 첫 키워드) 사용 횟수
+  if (ctx.keywords && ctx.keywords[0]) {
+    var mk = ctx.keywords[0], mkN = countIn_(body, mk), inLead = nsp_((B.filter(function (b) { return b.type === 'text'; })[0] || {}).text || '').indexOf(nsp_(mk)) >= 0;
+    if (mkN < STD.mainKwMin || !inLead) add({
+      area: '검색 적합성', status: '권장', title: '메인 키워드 "' + mk + '"', blocks: [],
+      comment: (mkN ? '"' + mk + '"가 본문에 ' + mkN + '번 있지만 첫 문단에는 없습니다.' : '"' + mk + '"가 본문에 없습니다.') + ' 이 말로 검색한 분이 찾아오도록 첫 문단에 한 번, 본문 전체에 3~5번 자연스럽게 넣어 주세요.',
+      evidence: [ev('측정', '본문 ' + mkN + '회, 첫 문단 ' + (inLead ? '있음' : '없음')), ev('기준', '공통 기준표 · 메인 키워드 첫 문단 1회, 본문 3~5회(최대 ' + STD.mainKwMax + '회)')]
+    });
+  }
+  // 작성일
+  if (planned && !/작성일\s*[:：]/.test(allText)) add({
+    area: '품질', status: '권장', title: '작성일 표기', blocks: [],
+    comment: '마지막 줄에 "작성일: 날짜"를 넣어 주세요. 가격·운영 정보가 언제 기준인지 손님과 AI 검색이 알 수 있습니다.',
+    evidence: [ev('기준', '공통 기준표 · 마지막 줄 작성일')]
+  });
+
   // 14. 글쓰기 표시가 글자로 남음 ([인용구], [표], [사진 1: ...], [확인 필요: ...] 등)
   var leftovers = [];
   B.forEach(function (b, bi) {
-    if (b.type !== 'text' && b.type !== 'heading' && b.type !== 'quote') return;
+    if (['text', 'heading', 'quote', 'table', 'list'].indexOf(b.type) < 0) return;
     var m = /\[(인용구?|표|사진[^\]]*|구분선|말풍선[^\]]*|강조[^\]]*|체크리스트[^\]]*|장소 버튼[^\]]*|지도|확인 필요[^\]]*)\]/.exec(b.text || '');
     if (m && !(planned && /^\[(사진|지도|구분선|인용)/.test(m[0]) && m[0] === b.text)) leftovers.push({ bi: bi, t: m[0] });
   });
@@ -655,7 +757,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
   // 16. 태그
   if (linkSrc && doc.tags && doc.tags.length === 0) add({
     area: '검색 적합성', status: '권장', title: '태그 없음', blocks: [],
-    comment: '이 글에 태그가 하나도 없습니다. 글 아래 태그는 검색하신 분이 같은 주제의 글을 찾아오는 길이 됩니다. 아래 "추천 해시태그"에서 상호와 핵심 키워드를 중심으로 10개 안팎을 넣어 주시면 좋겠습니다.',
+    comment: '이 글에 태그가 하나도 없습니다. 글 아래 태그는 검색하신 분이 같은 주제의 글을 찾아오는 길이 됩니다. 아래 "추천 해시태그"에서 상호와 핵심 키워드를 중심으로 8~15개를 넣어 주시면 좋겠습니다.',
     evidence: [ev('측정', '태그 0개', 'https://blog.naver.com/' + (doc.blogId || '') + '/' + (doc.logNo || ''))]
   });
 
@@ -671,7 +773,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     { group: '업체 정보', item: '주차와 찾아오는 길을 적었습니다', who: '대표', state: '☐' },
     { group: '업체 정보', item: '가격과 메뉴가 현재 기준입니다', who: '대표', state: '☐' },
     { group: '업체 정보', item: '이벤트·할인은 기간과 조건을 적었습니다', who: '대표', state: '☐' },
-    { group: '제목과 본문', item: '제목이나 첫 문단에 상호가 있습니다', who: '앱', state: names.length ? st(!F.some(function (f) { return f.title === '상호가 제목·첫 문단에 없음'; })) : '확인 불가' },
+    { group: '제목과 본문', item: '제목이나 첫 문단에 상호가 있습니다', who: '앱', state: names.length ? st(!F.some(function (f) { return /상호가 제목|본문에 상호가 없음/.test(f.title); })) : '확인 불가' },
     { group: '제목과 본문', item: '핵심 키워드를 자연스럽게 넣었습니다', who: '앱', state: keywordTable.length ? st(keywordTable.some(function (k) { return k.type !== '상호' && (k.inTitle || k.count); })) : '확인 불가' },
     { group: '제목과 본문', item: '첫 문단만 읽어도 무엇에 대한 글인지 알 수 있습니다', who: '대표', state: '☐' },
     { group: '제목과 본문', item: '소제목이나 인용구로 내용을 나눴습니다', who: '앱', state: st(B.some(function (b) { return b.type === 'heading' || b.type === 'quote' || b.type === 'divider'; })) },
@@ -781,6 +883,7 @@ function aiReview_(biz, doc, ctx, machine) {
     lines.join('\n'),
     '',
     '검토할 것: 제목과 본문이 맞는지, 검색한 사람의 궁금증에 답하는지, 직접 경험·구체 정보가 있는지, 같은 말 반복, 어색한 문장과 맞춤법, 사진과 본문의 관계, 첫 문단에서 무엇에 대한 글인지 알 수 있는지.',
+    '공통 기준표에서 꼭 볼 것: 다른 업체의 이름을 쓰거나 다른 가게·다른 형태의 업체를 깎아내리는 비교(있으면 "수정 필요"), 대표가 하지 않은 일을 한 것처럼 쓴 문장, 손님 한 사람의 말을 모든 손님의 의견처럼 쓴 문장, 근거 없는 가격·숫자·효능·수상 경력.',
     '',
     '규칙',
     '- 지적은 최대 6개. 정말 고칠 가치가 있는 것만. 사소한 취향은 넣지 않습니다.',

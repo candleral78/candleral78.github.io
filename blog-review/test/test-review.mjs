@@ -63,13 +63,23 @@ console.log('== 원고 검수');
 const text = ['반포 수학학원 고르는 법', '', '안녕하세요. 오늘은 수학학원 이야기입니다.', '[사진]', '우리 학원은 합격 보장 수업을 합니다. 전화는 02-1234-5678로 주세요.', '감사합니다.'].join('\n');
 const r3 = call('review', { bizId, source: 'text', text, sponsored: 'yes', aiImages: 'person', postType: '업체 소개' }).data;
 const t3 = r3.findings.map(f => f.title);
-check('상호 없음 → 수정 필요', t3.includes('상호가 제목·첫 문단에 없음'), t3);
+check('상호 없음 → 수정 필요', t3.includes('본문에 상호가 없음'), t3);
+check('주의 표현 중복 없음(보장/합격 보장)', !t3.includes('확인이 필요한 표현 "보장"'), t3);
 check('전화번호 다름 → 수정 필요', t3.includes('전화번호가 등록 정보와 다름'), t3);
 check('주의 표현 "합격 보장"', t3.some(x => x.includes('합격 보장')), t3);
 check('협찬 표기 없음', t3.includes('협찬·지원 표기 없음'), t3);
 check('AI 가상인물 표시 없음', t3.includes('AI 가상인물 표시 없음'), t3);
 check('원고에 [지도] 없음 → 권장', r3.findings.some(f => f.title === '지도(장소) 첨부' && f.status === '권장'));
 check('사진 수는 원고 표시 기준', r3.findings.some(f => f.title === '사진 수' && /원고/.test(f.comment)));
+
+
+console.log('== 글쓰기 앱 형식 원고 (공통 기준표)');
+const wtext = ['반포 수학학원, 초등 때 무엇부터 잡아야 할까요?', '반포필즈수학은 초등 수학에서 선행보다 수체계를 먼저 잡습니다. 반포 초등수학을 고민하시면 이 순서부터 보시길 권합니다.', '## 왜 수체계가 먼저인가요?', '**연산보다 구조가 먼저입니다**', '수체계를 모르면 중등에서 막힙니다. 저희 반 학생도 처음엔 계산만 빨랐습니다. 약수를 물으면 멈칫했습니다. 그래서 첫 달은 수체계만 다룹니다. 상담 때 풀이를 먼저 봅니다.', '[사진 1: 약수 노트]', '## 수업은 어떻게 하나요?', '| 항목 | 내용 |', '| 정원 | [확인 필요: 정원] |', '수업은 개념 뒤 바로 풀이입니다. 틀린 문제는 다시 풉니다. 숙제는 그날 것만 냅니다. 매달 노트를 보여 드립니다. 질문은 언제든 받습니다.', '[체크리스트: 상담 예약 / 노트 확인]', '[장소 버튼: 반포필즈수학]', '작성일: 2026-10-17'].join('\n');
+const rw = call('review', { bizId, source: 'text', text: wtext, keywords: ['반포 초등수학'], skipAi: true }).data;
+check('표·굵은 줄·체크리스트를 글자로 남기지 않음', rw.blocks.some(b => b.type === 'table') && rw.blocks.some(b => b.type === 'list') && !rw.blocks.some(b => b.text && /^\*\*|^\||^\[체크리스트/.test(b.text)), rw.blocks.map(b => b.type));
+check('상호가 첫 문단에 있으면 상호 지적 없음', !rw.findings.some(f => /상호/.test(f.title)), rw.findings.map(f => f.title));
+check('표가 있으면 표·묻고 답하기 지적 없음', !rw.findings.some(f => f.title === '표·묻고 답하기 없음'));
+check('[확인 필요] → 확인해 주세요', rw.findings.some(f => f.title === '확인이 필요한 칸'));
 
 console.log('== 캡처 검수');
 const r4 = call('review', { bizId, source: 'capture', images: ['AAAA', 'BBBB'] }).data;
@@ -79,7 +89,7 @@ check('캡처 화면 표시', r4.view === '실제 화면');
 
 console.log('== 목록·수정');
 const list = call('listReviews', { bizId }).data;
-check('검수 목록 4개', list.length === 4, list.length);
+check('검수 목록 5개', list.length === 5, list.length);
 check('코멘트 수정 저장', call('saveReview', { id: R.id, patch: { note: '확인함' } }).ok && call('getReview', { id: R.id }).data.note === '확인함');
 
 console.log('== AI 한도');

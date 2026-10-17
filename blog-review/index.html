@@ -456,9 +456,17 @@ function naverView(r){
   .br-mark img{opacity:.92}
   .br-no{display:inline-block;vertical-align:middle;margin:0 6px 2px 2px;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif!important;text-align:center;text-indent:0;pointer-events:auto;cursor:pointer;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .br-tag{display:block;font:700 12px/1.4 sans-serif;color:#d0162f;padding:4px 6px 0}
+  .img-ph{border:1px dashed #bbb;border-radius:6px;padding:28px 10px;text-align:center;color:#777;font:13px sans-serif;background:#fafafa}
+  .se-image-resource{opacity:1!important;visibility:visible!important}
   .br-no.soft{background:#fff;color:#d0162f;border:2px solid #d0162f;line-height:20px}</style>
   <div class="wrap"><div class="se-viewer se-theme-default">${r.viewHtml}</div></div>`;
-  const wrap=root.querySelector(".wrap"), comps=[...root.querySelectorAll(".se-component")];
+  const wrap=root.querySelector(".wrap");
+  // 제목 옆 네이버 버튼(이웃추가, 본문 기타 기능 등)과 링크 기능은 지웁니다.
+  root.querySelectorAll("button,.blog_authorArea,.blog_btnArea,.post_function_t1,.blog_category,.btn_buddyadd,.checkin_button_wrap").forEach(x=>x.remove());
+  // 사진은 바로 불러오고, 못 불러오면 빈칸 대신 사진 자리를 보여 줍니다.
+  root.querySelectorAll("img").forEach(i=>{ i.loading="eager"; i.referrerPolicy="no-referrer"; i.removeAttribute("data-lazy-src");
+    i.addEventListener("error",()=>{ if(i.dataset.retried||!/pstatic/.test(i.src)){ const ph=document.createElement("div"); ph.className="img-ph"; ph.textContent="사진을 불러오지 못했습니다 · 네이버에서 원문을 확인해 주세요"; i.replaceWith(ph); return } i.dataset.retried=1; i.src=i.src.replace(/\?type=\w+$/,"")+"?type=w773" }) });
+  const comps=[...root.querySelectorAll(".se-component")];
   function target(b){ const c=comps[b.ci]; if(!c) return null; if(b.type==="text"&&typeof b.pi==="number"){ const ps=[...c.querySelectorAll("p.se-text-paragraph")].filter(p=>p.textContent.replace(/\u200b/g,"").trim()); return ps[b.pi]||c } return c }
   function draw(){
     root.querySelectorAll(".br-no,.br-tag").forEach(x=>x.remove()); root.querySelectorAll("[data-br]").forEach(x=>{ x.removeAttribute("data-br"); x.classList.remove("br-mark","br-soft") });
