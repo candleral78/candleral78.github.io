@@ -181,7 +181,7 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
 @media (max-width:980px){ .split{grid-template-columns:1fr} .orig{position:static} .origscroll{height:70vh} }
 @media (max-width:620px){ .glance{grid-template-columns:1fr} .aich li{grid-template-columns:1.6em 1fr} .aich li span:last-child{grid-column:2} }
 .exporting .split{grid-template-columns:1fr} .exporting .glance{grid-template-columns:1fr} .exporting .aich li{grid-template-columns:1.6em 1fr} .exporting .aich li span:last-child{grid-column:2}
-@page{size:A4;margin:12mm 11mm}
+@page{size:A4;margin:12mm 11mm;@bottom-center{content:counter(page) " / " counter(pages);font:9px sans-serif;color:#777}}
 @media print{
   html,body{background:#fff!important;color:#000}
   header.top,.tabs,.no-print,.only-edit,#reviewForm,.copy,.toolbar{display:none!important}
@@ -639,6 +639,9 @@ async function downloadPdf(){
     for(const el of $$("#sheet details.sec")) put(await shot(el),W,4);
     const ft=sheet.querySelector(".foot"); if(ft) put(await shot(ft),W,0);
     if(!any) throw new Error("빈 PDF");
+    // 쪽 번호: 각 쪽 아래 가운데 "3 / 10"
+    const total=pdf.getNumberOfPages(); pdf.setFontSize(9); pdf.setTextColor(120);
+    for(let n=1;n<=total;n++){ pdf.setPage(n); pdf.text(n+" / "+total,PW/2,PH-5.5,{align:"center"}) }
     const url=URL.createObjectURL(pdf.output("blob")), a=document.createElement("a"); a.href=url; a.download=name; a.style.display="none"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
     status($("#shStatus"),`다운로드 폴더에 "${name}" 파일로 내려받았습니다.`);
   }catch(e){ console.error(e); status($("#shStatus"),"PDF를 바로 만들지 못해 인쇄 창으로 엽니다. 대상에서 \"PDF로 저장\"을 골라 주세요.",true); setTimeout(printPdf,400) }

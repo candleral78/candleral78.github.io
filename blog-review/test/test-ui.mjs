@@ -87,6 +87,8 @@ try {
   const dlPath = shot('6-다운로드').replace('.png', '.pdf'); await dl.saveAs(dlPath);
   const dbuf = fs.readFileSync(dlPath), dpages = (dbuf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
   check('PDF 바로 다운로드: ' + dl.suggestedFilename() + ' (' + dpages + '쪽, ' + Math.round(dbuf.length / 1024) + 'KB)', /^첨삭지_반포필즈수학_\d{4}-\d{2}-\d{2}\.pdf$/.test(dl.suggestedFilename()) && dpages >= 3 && dbuf.slice(0, 4).toString() === '%PDF');
+  const ptxt = (await import('child_process')).execFileSync('pdftotext', [dlPath, '-']).toString();
+  check('쪽 번호', ptxt.includes('1 / ' + dpages) && ptxt.includes(dpages + ' / ' + dpages));
   check('다운로드 안내 문구', /다운로드 폴더/.test(await page.textContent('#shStatus')));
   await page.evaluate(() => { document.querySelectorAll('#sheet details').forEach(d => d.open = true); document.body.classList.add('printing'); const v = document.querySelector('.nview'); if (v && v._draw) v._draw(); });
   await page.waitForTimeout(800);
