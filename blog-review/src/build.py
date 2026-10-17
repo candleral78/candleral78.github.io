@@ -5,7 +5,7 @@
 """
 import re, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
-API = 'REPLACE_WITH_WEBAPP_URL'
+API = 'https://script.google.com/macros/s/AKfycbzrizvMnzZnA3GfbxRr1xPnhn0MiTwF4Wz-oL7VSDMiGg2nf5gkn7fz2oA3UAR22dyZ2Q/exec'
 test = '--test' in sys.argv
 api = 'http://localhost:8788/exec' if test else API
 out = os.path.join(HERE, '..', 'test', 'app-test.html') if test else os.path.join(HERE, '..', 'index.html')
