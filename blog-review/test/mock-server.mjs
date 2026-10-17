@@ -52,7 +52,13 @@ export function makeServer(opts = {}) {
         findings: [
           { block: bi, quote: txt.slice(0, 12), area: '품질', level: '권장', title: '첫 문단 결론', fact: '첫 문단이 인사로 시작합니다.', reason: '검색한 분은 첫 화면에서 답을 찾습니다.', request: '첫 문장에 결론을 먼저 쓰세요.', suggestion: txt.slice(0, 30) + ' [확인 필요: 결론 문장]' },
           { block: 1, quote: '원문에 없는 문장입니다', area: '품질', level: '수정 필요', title: '가짜 지적', fact: 'x', reason: 'y', request: 'z', suggestion: '' }
-        ] }) };
+        ],
+        aiSearch: [{ item: '첫 문단에서 질문에 바로 답함', ok: false, note: '첫 문단에 결론을 한 문장으로 넣으세요.' }, { item: '질문형 소제목', ok: true, note: '소제목이 질문 형태라 좋습니다.' }, { item: '자주 묻는 질문(FAQ) 묶음', ok: false, note: 'FAQ 3개를 글 끝에 넣어 주세요.' }],
+        summaryBox: ['초등 수학은 수체계를 먼저 잡아야 합니다.', '반포필즈수학은 소수 정예로 풀이 과정을 확인합니다.', '상담은 [확인 필요: 연락 방법]'],
+        faq: [{ q: '초등 몇 학년부터 다니면 좋나요?', a: '[확인 필요: 대상 학년]' }],
+        nextTopics: [{ title: '반포 초등수학, 연산보다 먼저 볼 것', keyword: '반포 초등수학', why: '초등 학부모가 먼저 찾는 말입니다.' }, { title: '잠원동 중등수학 내신 준비', keyword: '잠원동 중등수학', why: '중등 전환기 문의가 많습니다.' }],
+        tags: ['반포필즈수학', '반포수학학원', '초등수학', '수체계', '소수정예수학']
+      }) };
     }
     return { code: 200, text: '{}' };
   }

@@ -172,14 +172,14 @@ function parseRss_(xml) {
 function parseBlocks_(html) {
   var blocks = [], parts = String(html).split('<div class="se-component se-');
   for (var i = 1; i < parts.length; i++) {
-    var p = parts[i], kind = (/^([a-zA-Z]+)/.exec(p) || [])[1] || 'other';
+    var p = parts[i], kind = (/^([a-zA-Z]+)/.exec(p) || [])[1] || 'other', ci = i - 1, n0 = blocks.length;
     var paras = [], pr = /<p class="se-text-paragraph[^"]*"[^>]*>([\s\S]*?)<\/p>/g, m;
     while ((m = pr.exec(p))) { var t = stripTags_(m[1]); if (t) paras.push(t); }
     if (kind === 'documentTitle') {
       var tt = paras.join(' ') || stripTags_((/se-title-text[^>]*>([\s\S]*?)<\/div>/.exec(p) || [])[1]);
       blocks.push({ type: 'title', text: tt });
     } else if (kind === 'text') {
-      paras.forEach(function (x) { blocks.push({ type: 'text', text: x }); });
+      paras.forEach(function (x, pi) { blocks.push({ type: 'text', text: x, pi: pi }); });
     } else if (kind === 'sectionTitle') {
       blocks.push({ type: 'heading', text: paras.join(' ') });
     } else if (kind === 'quotation') {
@@ -214,6 +214,7 @@ function parseBlocks_(html) {
     } else {
       blocks.push({ type: 'other', text: paras.join(' ') });
     }
+    for (var k = n0; k < blocks.length; k++) blocks[k].ci = ci;
   }
   // 본문 속 링크(글자에 건 링크)
   var links = [], lr = /data-linkdata='(\{[^']*\})'/g, lm;
@@ -221,6 +222,83 @@ function parseBlocks_(html) {
   var hr = /<a[^>]+href="(https?:\/\/(?:naver\.me|m?\.?place\.naver\.com|map\.naver\.com|booking\.naver\.com|talk\.naver\.com)[^"]*)"/g, hm;
   while ((hm = hr.exec(html))) links.push(unescapeHtml_(hm[1]));
   return { blocks: blocks, links: links };
+}
+
+/** html의 i 위치에서 시작하는 <div>를 짝이 맞는 </div>까지 잘라 냅니다. */
+function extractDiv_(html, i) {
+  if (i < 0) return '';
+  var re = /<(\/?)div\b/g, d = 0, m; re.lastIndex = i;
+  while ((m = re.exec(html))) { d += m[1] ? -1 : 1; if (d === 0) { var e = html.indexOf('>', m.index) + 1; return html.slice(i, e); } }
+  return html.slice(i);
+}
+/**
+ * 글 화면을 네이버 모양 그대로 다시 그리기 위한 HTML(제목 + 본문)과 네이버 스타일 주소.
+ * 스크립트·이벤트·외부 틀은 지우고, 늦게 불러오는 사진은 바로 보이게 바꿉니다.
+ */
+function buildView_(html) {
+  var title = extractDiv_(html, html.indexOf('<div class="se-component se-documentTitle'));
+  var main = extractDiv_(html, html.indexOf('<div class="se-main-container">'));
+  if (!main) return null;
+  var h = (title ? '<div class="se-documentTitle-wrap">' + title + '</div>' : '') + main;
+  h = h.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*')/gi, '').replace(/href\s*=\s*"javascript:[^"]*"/gi, 'href="#"')
+    .replace(/<img([^>]*?)\ssrc="[^"]*"([^>]*?)data-lazy-src="([^"]+)"/gi, '<img$1$2src="$3"')
+    .replace(/<img([^>]*?)data-lazy-src="([^"]+)"([^>]*?)\ssrc="[^"]*"/gi, '<img$1src="$2"$3')
+    .replace(/data-lazy-src="([^"]+)"/gi, 'src="$1"');
+  // 제목 영역의 카테고리·날짜·버튼 줄은 뺍니다.
+  h = h.replace(/<div class="blog_category"[\s\S]*?<\/div>/, '').replace(/<div class="blog_authorArea"[\s\S]*?<\/div>\s*<\/div>/, '');
+  var css = [], cr = /<link[^>]+rel="stylesheet"[^>]+href="(https:\/\/(?:ssl|editor-static)\.pstatic\.net\/[^"]+)"/g, cm;
+  while ((cm = cr.exec(html))) if (!/prismplayer/.test(cm[1])) css.push(cm[1]);
+  return { html: h.length > 160000 ? '' : h, css: css };
+}
+
+/** 글에 붙은 태그 (블로그 화면 바깥 주소에서 따로 읽습니다) */
+function fetchTags_(blogId, logNo) {
+  try {
+    var r = get_('https://blog.naver.com/BlogTagListInfo.naver?blogId=' + encodeURIComponent(blogId) + '&logNoList=' + logNo + '&logType=mylog', { 'User-Agent': DESKTOP_UA });
+    if (r.code !== 200) return null;
+    var j = JSON.parse(r.text.replace(/\s+/g, ' '));
+    var t = (j.taglist || [])[0];
+    if (!t) return [];
+    return String(t.tagName || '').split(',').map(function (x) { try { return decodeURIComponent(x).trim(); } catch (e) { return x.trim(); } }).filter(String);
+  } catch (e) { return null; }
+}
+
+/** 네이버 자동완성: 실제로 많이 찾는 이어지는 말 (해시태그 후보) */
+function autocomplete_(q) {
+  try {
+    var r = get_('https://ac.search.naver.com/nx/ac?q=' + encodeURIComponent(q) + '&con=1&frm=nv&ans=2&r_format=json&r_enc=UTF-8&r_unicode=0&t_koreng=1&run=2&rev=4&q_enc=UTF-8&st=100', { 'User-Agent': DESKTOP_UA });
+    if (r.code !== 200) return null;
+    var j = JSON.parse(r.text), out = [];
+    ((j.items || [])[0] || []).forEach(function (it) { if (it && it[0]) out.push(String(it[0])); });
+    return out;
+  } catch (e) { return null; }
+}
+
+/**
+ * 추천 해시태그: 상호·핵심 키워드 → 이번 글 키워드 → 자동완성 → AI 제안 순.
+ * 검색광고 키가 있으면 최근 30일 검색량을 붙입니다(최대 15개).
+ */
+function tagSuggest_(biz, ctx, aiTags) {
+  var list = [], seen = {};
+  function add(t, src) { t = String(t || '').replace(/^#/, '').trim(); var k = nsp_(t); if (!k || seen[k] || k.length > 25) return; seen[k] = 1; list.push({ tag: k, src: src }); }
+  (biz.coreKeywords || []).forEach(function (k) { add(k.kw, k.type === '상호' ? '상호' : '핵심 키워드'); });
+  (ctx.keywords || []).forEach(function (k) { add(k, '이번 글'); });
+  var seeds = (biz.coreKeywords || []).filter(function (k) { return k.type !== '상호'; }).map(function (k) { return k.kw; }).concat(ctx.keywords || []).slice(0, 4);
+  var acOk = true;
+  seeds.forEach(function (q) { var a = autocomplete_(q); if (a === null) acOk = false; (a || []).slice(1, 6).forEach(function (x) { add(x, '자동완성'); }); });
+  (aiTags || []).forEach(function (x) { add(x, 'AI 제안'); });
+  list = list.slice(0, 30);
+  var volOk = false, volNote = '';
+  var want = list.slice(0, 15).map(function (x) { return x.tag; });
+  for (var i = 0; i < want.length; i += 5) {
+    var k = searchAdKeywords_(want.slice(i, i + 5));
+    if (k.skipped) { volNote = '검색광고 API 키를 넣으면 검색량이 표시됩니다'; break; }
+    if (k.error) { volNote = '검색량 조회 실패: ' + k.error.slice(0, 60); break; }
+    volOk = true;
+    k.main.forEach(function (v) { list.forEach(function (x) { if (x.tag === nsp_(v.keyword)) { x.pc = v.pc; x.mobile = v.mobile; } }); });
+  }
+  return { list: list, at: nowKst_(), volume: volOk, note: volNote, autocomplete: acOk };
 }
 
 /** 예전 0단계 요약용 */
@@ -298,7 +376,9 @@ function loadPost_(req) {
     if (r.code !== 200) throw fail_('fetch_failed', '글을 읽지 못했습니다(HTTP ' + r.code + '). 비공개 글이면 캡처나 원고로 검수해 주세요.');
     var pb = parseBlocks_(r.text);
     if (!pb.blocks.some(function (b) { return b.type === 'text'; })) throw fail_('fetch_failed', '본문을 찾지 못했습니다. 비공개·이웃공개 글이면 캡처나 원고로 검수해 주세요.');
-    return { blocks: pb.blocks, links: pb.links, url: 'https://blog.naver.com/' + id.blogId + '/' + id.logNo, blogId: id.blogId, logNo: id.logNo, view: '재구성 화면' };
+    var v = buildView_(r.text);
+    return { blocks: pb.blocks, links: pb.links, url: 'https://blog.naver.com/' + id.blogId + '/' + id.logNo, blogId: id.blogId, logNo: id.logNo,
+      view: v && v.html ? '네이버 화면' : '재구성 화면', viewHtml: v ? v.html : '', viewCss: v ? v.css : [], tags: fetchTags_(id.blogId, id.logNo) };
   }
   if (req.source === 'text') {
     var pm = parseManuscript_(req.text, req.title);
@@ -572,6 +652,13 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     });
   }
 
+  // 16. 태그
+  if (linkSrc && doc.tags && doc.tags.length === 0) add({
+    area: '검색 적합성', status: '권장', title: '태그 없음', blocks: [],
+    comment: '이 글에 태그가 하나도 없습니다. 글 아래 태그는 검색하신 분이 같은 주제의 글을 찾아오는 길이 됩니다. 아래 "추천 해시태그"에서 상호와 핵심 키워드를 중심으로 10개 안팎을 넣어 주시면 좋겠습니다.',
+    evidence: [ev('측정', '태그 0개', 'https://blog.naver.com/' + (doc.blogId || '') + '/' + (doc.logNo || ''))]
+  });
+
   // 체크리스트 (앱 확인 결과를 미리 표시)
   function st(cond) { return cond === null ? '확인 불가' : cond ? '✅' : '❌'; }
   var hasMapOk = maps.some(function (m) { return m.placeId && m.placeId === String(biz.placeId); });
@@ -597,7 +684,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     { group: '표시와 주의 표현', item: '효과를 장담하는 표현을 쓰지 않았습니다', who: '앱', state: cautionHits.length ? '확인 필요 ' + cautionHits.length + '건' : '✅' },
     { group: '표시와 주의 표현', item: '다른 사람의 사진·글·글꼴을 허락 없이 쓰지 않았습니다', who: '대표', state: '☐' },
     { group: '발행 설정', item: '카테고리를 맞게 골랐습니다', who: '대표', state: '☐' },
-    { group: '발행 설정', item: '태그에 상호와 핵심 키워드를 넣었습니다', who: '대표', state: '☐' },
+    { group: '발행 설정', item: '태그에 상호와 핵심 키워드를 넣었습니다', who: linkSrc && doc.tags ? '앱' : '대표', state: linkSrc && doc.tags ? st(doc.tags.some(function (t) { return names.some(function (n) { return nsp_(t).indexOf(nsp_(n)) >= 0; }); }) || (doc.tags.length > 0 && !names.length)) : '☐' },
     { group: '발행 설정', item: "공개 설정이 '전체공개'입니다", who: '대표', state: linkSrc ? '✅' : '☐' },
     { group: '발행 설정', item: '검색 허용과 외부 보내기 허용이 켜져 있습니다', who: '대표', state: '☐' },
     { group: '발행 설정', item: '네이버 맞춤법 검사를 했습니다', who: '대표', state: '☐' },
@@ -607,7 +694,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
 
   return {
     findings: F, keywordTable: keywordTable, checklist: checklist, imageKeys: imageKeys,
-    stats: { chars: chars, photos: photos.length, maps: maps.length, headings: B.filter(function (b) { return b.type === 'heading'; }).length, quotes: B.filter(function (b) { return b.type === 'quote'; }).length, dividers: B.filter(function (b) { return b.type === 'divider'; }).length, tables: B.filter(function (b) { return b.type === 'table'; }).length, videos: B.filter(function (b) { return b.type === 'video'; }).length }
+    stats: { tags: doc.tags ? doc.tags.length : null, chars: chars, photos: photos.length, maps: maps.length, headings: B.filter(function (b) { return b.type === 'heading'; }).length, quotes: B.filter(function (b) { return b.type === 'quote'; }).length, dividers: B.filter(function (b) { return b.type === 'divider'; }).length, tables: B.filter(function (b) { return b.type === 'table'; }).length, videos: B.filter(function (b) { return b.type === 'video'; }).length }
   };
 }
 var INDUSTRY_CHECKS = {
@@ -701,7 +788,15 @@ function aiReview_(biz, doc, ctx, machine) {
     '- area: "품질", "검색 적합성", "가이드 준수", "표시" 중 하나.',
     '- good: 실제로 잘된 점 1~2개를 근거(블록 번호)와 함께. 칭찬할 근거가 없으면 빈 배열.',
     '',
-    'JSON만 출력: {"good":[{"block":0,"text":"..."}],"findings":[{"block":0,"quote":"...","area":"품질","level":"권장","title":"짧은 제목","fact":"...","reason":"...","request":"...","suggestion":"..."}]}'
+    '',
+    '추가로 할 것',
+    '- aiSearch: 네이버 AI 브리핑·ChatGPT 같은 AI 검색이 이 글을 답변 근거로 가져가기 쉬운지 6가지를 점검합니다. 각 항목 ok(true/false)와 note(한 문장, 대표에게 하는 말, 고칠 점이 있으면 무엇을 넣으면 되는지). 항목: "첫 문단에서 질문에 바로 답함", "질문형 소제목", "자주 묻는 질문(FAQ) 묶음", "업체명·지역·대상이 한 문장에 함께 나옴", "가격·시간·위치 같은 확인 가능한 사실", "직접 경험이나 고유한 정보".',
+    '- summaryBox: 글 맨 위에 넣으면 AI 검색과 바쁜 독자에게 도움이 되는 3줄 요약(글에 있는 사실만, 없는 정보는 [확인 필요]).',
+    '- faq: 이 글에 덧붙이면 좋은 자주 묻는 질문 3개와 글에 있는 사실만으로 쓴 답(모르면 [확인 필요]).',
+    '- nextTopics: 이 글 다음에 이어서 쓰면 좋은 글 3편. title(블로그 제목), keyword(검색할 말), why(한 문장, 검색한 사람 입장의 이유). 업체 업종·지역·핵심 키워드와 맞게.',
+    '- tags: 이 글에 붙이면 좋은 해시태그 10개(띄어쓰기 없이, # 없이). 상호와 지역+업종을 먼저.',
+    '',
+    'JSON만 출력: {"good":[{"block":0,"text":"..."}],"findings":[{"block":0,"quote":"...","area":"품질","level":"권장","title":"짧은 제목","fact":"...","reason":"...","request":"...","suggestion":"..."}],"aiSearch":[{"item":"첫 문단에서 질문에 바로 답함","ok":false,"note":"..."}],"summaryBox":["...","...","..."],"faq":[{"q":"...","a":"..."}],"nextTopics":[{"title":"...","keyword":"...","why":"..."}],"tags":["..."]}'
   ].join('\n');
   var res = gemini_(prompt, [], true, '');
   var j = parseJson_(res.text) || {};
@@ -723,7 +818,11 @@ function aiReview_(biz, doc, ctx, machine) {
     });
   });
   var good = (j.good || []).filter(function (g) { return g && g.text; }).slice(0, 2).map(function (g) { return { block: +g.block, text: softenTone_(String(g.text)) }; });
-  return { findings: findings, good: good, dropped: dropped, model: res.model };
+  var aiSearch = (j.aiSearch || []).slice(0, 6).map(function (x) { return { item: String(x.item || ''), ok: !!x.ok, note: softenTone_(String(x.note || '')) }; }).filter(function (x) { return x.item; });
+  var nextTopics = (j.nextTopics || []).slice(0, 3).map(function (x) { return { title: String(x.title || ''), keyword: String(x.keyword || ''), why: softenTone_(String(x.why || '')) }; }).filter(function (x) { return x.title; });
+  var faq = (j.faq || []).slice(0, 3).map(function (x) { return { q: String(x.q || ''), a: String(x.a || '') }; }).filter(function (x) { return x.q; });
+  var summaryBox = (j.summaryBox || []).slice(0, 3).map(String);
+  return { findings: findings, good: good, dropped: dropped, model: res.model, aiSearch: aiSearch, nextTopics: nextTopics, faq: faq, summaryBox: summaryBox, tags: (j.tags || []).slice(0, 12).map(String) };
 }
 /** "~하세요" 지시형을 "~해 주세요"로 바꿉니다. */
 function softenTone_(s) {
@@ -752,6 +851,10 @@ function runReview_(req) {
   var ai = { findings: [], good: [], error: '' };
   if (req.skipAi) ai.error = 'AI 첨삭을 건너뛰었습니다.';
   else { try { ai = aiReview_(biz, doc, ctx, machine); } catch (e) { ai.error = e.code === 'quota' ? '오늘 무료 AI 한도를 모두 썼습니다. 기계 검사 결과만 저장했습니다.' : 'AI 첨삭 실패: ' + (e.message || e); } }
+  var tags = tagSuggest_(biz, ctx, ai.tags || []);
+  // 다음 글 추천 키워드의 검색량 (키가 있을 때만)
+  var nt = ai.nextTopics || [];
+  if (nt.length) { var kv = searchAdKeywords_(nt.map(function (x) { return x.keyword; })); if (kv.main) nt.forEach(function (x) { kv.main.forEach(function (v) { if (nsp_(v.keyword) === nsp_(x.keyword)) { x.pc = v.pc; x.mobile = v.mobile; } }); }); }
   var findings = machine.findings.concat(ai.findings);
   var order = { '수정 필요': 0, '추가 확인': 1, '권장': 2, '확인 불가': 3 };
   findings.sort(function (a, b) { return (order[a.status] - order[b.status]) || ((a.blocks[0] || 999) - (b.blocks[0] || 999)); });
@@ -765,6 +868,8 @@ function runReview_(req) {
     view: doc.view, partial: !!doc.partial, ctx: ctx, blocks: doc.blocks, links: doc.links, stats: machine.stats,
     keywordTable: machine.keywordTable, evidence: evidence, checklist: machine.checklist, findings: findings,
     good: ai.good, aiError: ai.error || '', aiDropped: ai.dropped || 0, summary: summary, imageKeys: machine.imageKeys,
+    tags: doc.tags || null, tagSuggest: tags, aiSearch: ai.aiSearch || [], summaryBox: ai.summaryBox || [], faq: ai.faq || [], nextTopics: nt,
+    viewHtml: doc.viewHtml || '', viewCss: doc.viewCss || [],
     bizSnapshot: { name: biz.name, phone: biz.phone, address: biz.address, placeId: biz.placeId, placeCheckedAt: biz.placeCheckedAt, coreKeywords: biz.coreKeywords || [] },
     previousReviewId: sameUrl ? sameUrl.id : ''
   };

@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16p
 .hint,.status,small{font-weight:300}
 b,strong,h1,h2,h3,th{font-weight:700}
 input,textarea,select,button{font:inherit;font-weight:500}
-.wrap{max-width:760px;margin:0 auto;padding:20px 16px 72px;display:flex;flex-direction:column;gap:18px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 72px;display:flex;flex-direction:column;gap:18px}
 header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 h1{font-size:1.5rem;line-height:1.25;margin:0}
 h2{font-size:1.18rem;margin:0}
@@ -150,7 +150,51 @@ mark.q{background:none;color:inherit;text-decoration:underline wavy var(--pen);t
 .exporting .only-edit,.exporting .no-export{display:none!important}
 .exporting .card.off{display:none}
 @media (max-width:560px){ .sheet{padding:18px 14px} .proof{padding-left:40px} .marks{left:-32px} .check .it{grid-template-columns:4em 1fr} .check .who{display:none} }
-@media print{ body{background:#fff} header.top,.tabs,.no-print,.only-edit{display:none!important} .wrap{max-width:none;padding:0} .sheet{border:0;padding:0} .card.off{display:none} .card{break-inside:avoid} }
+
+/* 한눈에 보기 */
+.glance{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;border:1px solid var(--line);border-radius:6px;padding:16px;background:var(--surface)}
+.glance .g-title{font-size:.88rem;color:var(--muted)}
+.glance .head{font-size:1.4rem;font-weight:700;line-height:1.3;margin:4px 0 8px}
+.glance .head.must{color:var(--pen)}
+.stats{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted);margin-top:8px}
+.stats b{color:var(--ink);font-size:.95rem;margin-right:2px}
+.firsts{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.firsts a{display:flex;gap:8px;align-items:center;color:var(--ink);text-decoration:none;font-weight:500}
+.firsts a:hover{text-decoration:underline}
+.goodline{font-size:.86rem;margin-top:10px;color:var(--muted)}
+.goodline b{color:var(--ok);margin-right:4px}
+.split{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:22px;align-items:start}
+.orig{position:sticky;top:10px;display:flex;flex-direction:column;gap:8px}
+.orighead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.origscroll{height:78vh;overflow:auto;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:inset 0 0 0 6px var(--sunk)}
+.origscroll .proof{border:0;max-width:none}
+.nframe{width:100%;border:0;display:block;min-height:600px;background:#fff}
+.capwrap canvas{width:100%;display:block}
+.cards-h{margin-bottom:-4px}
+.card{cursor:pointer}
+details.sec{border-top:2px solid var(--ink);padding-top:10px}
+details.sec>summary{list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:10px;cursor:pointer;flex-wrap:wrap}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary h3::before{content:"▸ ";color:var(--muted)}
+details.sec[open]>summary h3::before{content:"▾ "}
+details.sec .sum{font-size:.85rem;color:var(--muted)}
+.secbody{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.lbl2{font-weight:700;font-size:.92rem;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.86rem;background:var(--surface);display:inline-flex;gap:5px;align-items:baseline}
+.chip small{color:var(--muted);font-size:.74rem}
+.chip.brand{border-color:var(--pen);color:var(--pen)}
+.chip.on{background:var(--sunk)}
+.miss{color:var(--pen);font-weight:700}
+.aich{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.aich li{display:grid;grid-template-columns:1.6em 13em 1fr;gap:8px;font-size:.9rem;align-items:baseline}
+.aich li.no b{color:var(--pen)}
+.nexts{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:10px}
+.nexts li{display:flex;flex-direction:column;gap:2px}
+@media (max-width:980px){ .split{grid-template-columns:1fr} .orig{position:static} .origscroll{height:70vh} }
+@media (max-width:620px){ .glance{grid-template-columns:1fr} .aich li{grid-template-columns:1.6em 1fr} .aich li span:last-child{grid-column:2} }
+.exporting .split{grid-template-columns:1fr} .exporting .glance{grid-template-columns:1fr} .exporting .aich li{grid-template-columns:1.6em 1fr} .exporting .aich li span:last-child{grid-column:2}
+@media print{ body{background:#fff} header.top,.tabs,.no-print,.only-edit,.orig,#reviewForm{display:none!important} .split{display:block} .wrap{max-width:none;padding:0} .sheet{border:0;padding:0} .card.off{display:none} .card{break-inside:avoid} }
 @media (prefers-reduced-motion:no-preference){ .card{scroll-margin-top:16px} }
 </style>
 
@@ -368,35 +412,81 @@ function cropCanvas(b){
     g.strokeStyle="#d0162f"; g.lineWidth=Math.max(3,W/250); g.strokeRect(x0*W-sx,y0*H-sy,(x1-x0)*W,(y1-y0)*H) };
   return c;
 }
+function capOverlay(r,byNo){
+  // 캡처 검수: 올린 화면 전체 위에 번호와 빨간 상자
+  const wrap=document.createElement("div"); wrap.className="capwrap";
+  (r._capture||[]).forEach((src,ii)=>{ const c=document.createElement("canvas"), img=new Image(); img.src=src; wrap.appendChild(c);
+    img.onload=()=>{ c.width=img.width; c.height=img.height; const g=c.getContext("2d"); g.drawImage(img,0,0);
+      const lw=Math.max(3,img.width/200), fs=Math.max(22,img.width/22);
+      (r.findings||[]).filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).forEach(bi=>{ const b=r.blocks[bi]; if(!b||b.img!==ii||!b.box) return;
+        const [y0,x0,y1,x1]=b.box.map(v=>v/1000); g.strokeStyle="#d0162f"; g.lineWidth=lw; g.strokeRect(x0*img.width,y0*img.height,(x1-x0)*img.width,(y1-y0)*img.height);
+        const cx=Math.max(fs*.7,x0*img.width-fs*.2), cy=y0*img.height+fs*.7; g.fillStyle="#d0162f"; g.beginPath(); g.arc(cx,cy,fs*.65,0,7); g.fill();
+        g.fillStyle="#fff"; g.font=`700 ${fs}px sans-serif`; g.textAlign="center"; g.textBaseline="middle"; g.fillText(String(f.no),cx,cy+1) })) } });
+  return wrap;
+}
+function naverFrame(r){
+  // 발행 글: 네이버 화면 코드를 그대로 그리고 위에 번호 상자를 올립니다.
+  const fr=document.createElement("iframe"); fr.className="nframe"; fr.title="블로그 원문";
+  fr.srcdoc=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="https://m.blog.naver.com/" target="_blank">${(r.viewCss||[]).map(u=>`<link rel="stylesheet" href="${esc(u)}">`).join("")}
+  <style>body{margin:0;background:#fff;padding:8px 14px 40px 36px;position:relative}.se-viewer{position:relative}img{max-width:100%!important;height:auto!important}
+  .br-box{position:absolute;border:2.5px solid #d0162f;border-radius:4px;pointer-events:none;z-index:50}
+  .br-box.soft{border-style:dashed}
+  .br-no{position:absolute;left:-30px;top:-2px;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif;text-align:center;pointer-events:auto;cursor:pointer}
+  .br-box.soft .br-no{background:#fff;color:#d0162f;border:2px solid #d0162f;line-height:20px}</style></head>
+  <body><div class="se-viewer se-theme-default">${r.viewHtml}</div></body></html>`;
+  fr.onload=()=>{ const d=fr.contentDocument; if(!d) return;
+    const comps=[...d.querySelectorAll(".se-component")];
+    function target(b){ const c=comps[b.ci]; if(!c) return null; if(b.type==="text"&&typeof b.pi==="number"){ const ps=[...c.querySelectorAll("p.se-text-paragraph")].filter(p=>p.textContent.replace(/​/g,"").trim()); return ps[b.pi]||c } return c }
+    function draw(){ d.querySelectorAll(".br-box").forEach(x=>x.remove()); const host=d.body, hb=host.getBoundingClientRect(); const used={};
+      (r.findings||[]).filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).filter(x=>x>=0).slice(0,3).forEach(bi=>{ const b=r.blocks[bi]; if(!b) return; const el=target(b); if(!el) return;
+        const rc=el.getBoundingClientRect(); const box=d.createElement("div"); box.className="br-box"+(f.status==="수정 필요"?"":" soft");
+        const k=Math.round(rc.top); const shift=(used[k]=(used[k]||0)+1)-1;
+        Object.assign(box.style,{left:(rc.left-hb.left-4)+"px",top:(rc.top-hb.top-4)+"px",width:(rc.width+8)+"px",height:(rc.height+8)+"px"});
+        const n=d.createElement("span"); n.className="br-no"; n.textContent=f.no; n.style.top=(-2+shift*28)+"px"; n.title=f.title; n.onclick=()=>{ const cd=document.getElementById("card-"+f.no); if(cd) cd.scrollIntoView({behavior:"smooth",block:"start"}) };
+        box.appendChild(n); box.dataset.no=f.no; host.appendChild(box) })) }
+    draw(); setTimeout(draw,800); d.querySelectorAll("img").forEach(i=>i.addEventListener("load",draw));
+    fr._goto=no=>{ const bx=d.querySelector(`.br-box[data-no="${no}"]`); if(bx){ const sc=fr.parentElement; sc.scrollTo({top:Math.max(0,bx.offsetTop-80),behavior:"smooth"}) } };
+    fr.style.height=Math.max(600,d.documentElement.scrollHeight)+"px";
+    new (window.ResizeObserver||function(){this.observe=()=>{}})(()=>{ fr.style.height=d.documentElement.scrollHeight+"px"; draw() }).observe(d.body);
+  };
+  return fr;
+}
+function vol(x){ if(x.pc==null&&x.mobile==null) return ""; const n=v=>typeof v==="number"?v:0; const sum=n(x.pc)+n(x.mobile); const lt=String(x.pc).includes("<")||String(x.mobile).includes("<"); return lt&&!sum?"10 미만":sum.toLocaleString("ko-KR")+(lt?"+":"") }
 function renderSheet(){
   const r=CUR, F=r.findings||[], S=r.summary||{}, st=r.stats||{};
-  const byBlock={}; F.filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).filter(x=>x>=0).forEach(bi=>(byBlock[bi]=byBlock[bi]||[]).push(f)));
+  const shown=F.filter(f=>f.show!==false);
+  const top=shown.filter(f=>f.status==="수정 필요").concat(shown.filter(f=>f.status==="추가 확인"),shown.filter(f=>f.status==="권장")).slice(0,3);
   const opinion=r.opinionText||OPINION_DEFAULT;
   const kwRows=(r.keywordTable||[]).map(k=>{ const e=k.evidence||{}, v=e.volume;
-    const vol=v?`PC ${v.pc} · 모바일 ${v.mobile}`:"—";
-    const rk=e.rankScreen>0?`이 글 블로그 검색 ${e.rankScreen}위`:e.rankScreen===0?"이 글 상위 10개 안에 없음":"";
-    return `<tr><td>${esc(k.kw)}<div class="ev">${esc(k.type)}</div></td><td class="${k.where==="없음"?"miss":""}">${esc(k.where)}</td><td>${esc(vol)}${e.at?`<div class="ev">${esc(e.at.slice(5,16))} 조회 · 최근 30일${rk?" · "+esc(rk):""}${e.link?` · <a href="${esc(e.link)}" target="_blank" rel="noopener">검색 결과</a>`:""}</div>`:""}</td></tr>` }).join("");
+    const rk=e.rankScreen>0?`이 글 ${e.rankScreen}위`:e.rankScreen===0?"이 글 10위 밖":"";
+    return `<tr><td>${esc(k.kw)}<div class="ev">${esc(k.type)}</div></td><td class="${k.where==="없음"?"miss":""}">${esc(k.where)}</td><td>${v?esc(vol(v)):"—"}</td><td class="ev">${e.at?`${esc(e.at.slice(5,16))} 조회${rk?" · "+esc(rk):""}${e.link?` · <a href="${esc(e.link)}" target="_blank" rel="noopener">검색 결과</a>`:""}`:""}</td></tr>` }).join("");
+  const TS=r.tagSuggest||{list:[]};
+  const curTags=Array.isArray(r.tags)?(r.tags.length?r.tags.map(t=>`<span class="chip on">#${esc(t)}</span>`).join(""):`<span class="miss">태그 없음</span>`):`<span class="hint">${r.source==="link"?"읽지 못함":"발행 글 링크로 검수하면 확인합니다"}</span>`;
+  const sugTags=(TS.list||[]).map(t=>`<span class="chip ${t.src==="상호"?"brand":""}" title="${esc(t.src)}">#${esc(t.tag)}${vol(t)?`<small>${esc(vol(t))}</small>`:""}</span>`).join("");
   const checks=r.checklist||[]; let g="";
   const chk=checks.map(c=>{ const head=c.group!==g?`<div class="g">${esc(c.group)}</div>`:""; g=c.group;
     const cls=/❌|확인 필요/.test(c.state)?"no":/✅/.test(c.state)?"yes":"";
     return head+`<div class="it ${cls==="no"?"hot":""}"><span class="st ${cls}">${esc(c.state)}</span><span>${esc(c.item)}</span><span class="who">${esc(c.who)}</span></div>` }).join("");
-  const proof=(r.blocks||[]).map((b,i)=>{ const fs=byBlock[i]||[]; const q=fs.map(f=>f.quote).find(Boolean);
-    const marks=fs.length?`<span class="marks">${fs.map(f=>`<a class="mk ${f.status==="수정 필요"?"":"soft"}" href="#card-${f.no}" aria-label="${f.no}번 의견">${f.no}</a>`).join("")}</span>`:"";
-    return `<div class="${blkClass(b)} ${fs.length?"flag":""}">${marks}${blockHtml(b,q)}</div>` }).join("");
+  const nNo=checks.filter(c=>/❌|확인 필요/.test(c.state)).length, nBox=checks.filter(c=>c.state==="☐").length;
+  const aiS=r.aiSearch||[], aiBad=aiS.filter(a=>!a.ok).length;
   const cards=F.filter(f=>f.show!==false||EDIT).map(f=>{
     const bi=(f.blocks||[]).filter(x=>x>=0)[0], b=r.blocks[bi];
-    let ex="";
-    if(b){ ex=`<div class="excerpt" data-bi="${bi}">${b.box&&r._capture?"":`${bi>0&&r.blocks[bi-1].type==="text"&&b.type==="text"?`<p class="ctx">${esc(r.blocks[bi-1].text.slice(-60))}</p>`:""}<div>${blockHtml(b,f.quote)}</div>`}</div>` }
+    let ex=""; if(b&&!(b.box&&r._capture)){ ex=`<div class="excerpt">${bi>0&&r.blocks[bi-1].type==="text"&&b.type==="text"?`<p class="ctx">${esc(r.blocks[bi-1].text.slice(-60))}</p>`:""}<div>${blockHtml(b,f.quote)}</div></div>` } else if(b) ex=`<div class="excerpt" data-bi="${bi}"></div>`;
     const ev=(f.evidence||[]).map(e=>`<li>${esc(e.label)}: <b>${esc(e.value)}</b>${e.link?` · <a href="${esc(e.link)}" target="_blank" rel="noopener">열기</a>`:""}${e.at?` · ${esc(e.at.slice(5,16))}`:""}</li>`).join("");
-    return `<article class="card ${f.show===false?"off":""}" id="card-${f.no}">
-      <div class="ch"><span class="mk ${f.status==="수정 필요"?"":"soft"}">${f.no}</span><h4>${esc(f.title)}</h4><span class="tag ${TAGCLS[f.status]||""}">${esc(TAGTXT[f.status]||f.status)}</span><span class="tag">${esc(f.area)}</span>
+    return `<article class="card ${f.show===false?"off":""}" id="card-${f.no}" data-no="${f.no}">
+      <div class="ch"><span class="mk ${f.status==="수정 필요"?"":"soft"}">${f.no}</span><h4>${esc(f.title)}</h4><span class="tag ${TAGCLS[f.status]||""}">${esc(TAGTXT[f.status]||f.status)}</span>
         <label class="only-edit no-export" style="flex-direction:row;gap:6px;margin-left:auto;font-size:.85rem"><input type="checkbox" class="keep" data-no="${f.no}" ${f.show!==false?"checked":""}>보내기에 넣기</label></div>
       ${ex}
       <p class="comment" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.comment)}</p>
-      ${f.suggestion||EDIT?`<div class="fix"><span class="lbl">고친 예시</span><span class="sugg" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.suggestion||"")}</span><button class="btn ghost small no-export copy" data-no="${f.no}">복사</button></div>`:""}
-      <ul class="evid"><li>근거 · ${esc(f.source==="AI"?"AI 첨삭":"앱 확인")}</li>${ev}</ul>
+      ${f.suggestion||EDIT?`<div class="fix"><span class="lbl">고친 예시</span><span class="sugg" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.suggestion||"")}</span><button class="btn ghost small no-export copy" data-copy="${esc(f.suggestion||"")}">복사</button></div>`:""}
+      <ul class="evid"><li>근거 · ${esc(f.source==="AI"?"AI 첨삭":"앱 확인")} · ${esc(f.area)}</li>${ev}</ul>
     </article>` }).join("");
-  const goods=(r.good||[]).map(x=>`<li>${esc(x.text)}</li>`).join("");
+  const hasFrame=!!r.viewHtml, hasCap=!!(r._capture&&r._capture.length);
+  const proof=(r.blocks||[]).map((b,i)=>{ const fs=shown.filter(f=>(f.blocks||[]).includes(i)); const q=fs.map(f=>f.quote).find(Boolean);
+    const marks=fs.length?`<span class="marks">${fs.map(f=>`<a class="mk ${f.status==="수정 필요"?"":"soft"}" href="#card-${f.no}">${f.no}</a>`).join("")}</span>`:"";
+    return `<div class="${blkClass(b)} ${fs.length?"flag":""}">${marks}${blockHtml(b,q)}</div>` }).join("");
+  const nextT=(r.nextTopics||[]).map((t,i)=>`<li><b>${esc(t.title)}</b><span class="hint">검색할 말: ${esc(t.keyword)}${vol(t)?` · 최근 30일 ${esc(vol(t))}회`:""}</span><span>${esc(t.why)}</span></li>`).join("");
+  const sumBox=(r.summaryBox||[]).filter(Boolean), faq=r.faq||[];
   $("#result").innerHTML=`
   <div class="row no-print" style="margin:6px 0 10px">
     <button class="btn ghost small" id="edBtn">${EDIT?"고치기 끝내기":"코멘트 고치기"}</button>
@@ -408,25 +498,54 @@ function renderSheet(){
   <div class="sheet ${EDIT?"editing":""}" id="sheet">
     <div class="masthead"><h2>${esc(r.bizName)} 블로그 첨삭지</h2><span class="meta">${esc(r.createdAt.slice(0,10))} · ${esc(r.source==="link"?"발행 글":r.source==="text"?"발행 전 원고":"화면 캡처")}</span></div>
     <p class="opinion" id="opinion" ${EDIT?"contenteditable=true":""}>${esc(opinion)}</p>
-    <div class="verdict"><h3>검수 결과</h3>
-      <p class="head ${S.must?"must":""}">${esc(S.headline||"")}</p>
-      <div class="counts"><span><b>${S.must||0}</b>꼭 고쳐 주실 것</span><span><b>${S.suggest||0}</b>권해 드리는 것</span><span><b>${S.check||0}</b>확인이 필요한 것</span></div>
-      <p class="facts">${esc(r.title)}<br>공백 제외 ${st.chars||0}자 · 사진 ${st.photos||0} · 지도 ${st.maps||0} · 소제목 ${st.headings||0} · 인용구 ${st.quotes||0} · 구분선 ${st.dividers||0} · 표 ${st.tables||0} · 동영상 ${st.videos||0}</p>
+    <div class="glance">
+      <div class="g-left">
+        <p class="g-title">${esc(r.title)}</p>
+        <p class="head ${S.must?"must":""}">${esc(S.headline||"")}</p>
+        <div class="counts"><span><b>${S.must||0}</b>꼭 고쳐 주실 것</span><span><b>${S.suggest||0}</b>권해 드리는 것</span><span><b>${S.check||0}</b>확인이 필요한 것</span></div>
+        <div class="stats">${[["글자",st.chars],["사진",st.photos],["지도",st.maps],["소제목",st.headings],["인용구",st.quotes],["표",st.tables],["태그",st.tags==null?"—":st.tags]].map(([k,v])=>`<span><b>${esc(v==null?0:v)}</b>${k}</span>`).join("")}</div>
+      </div>
+      <div class="g-right">
+        <h3>먼저 고칠 것</h3>
+        <ol class="firsts">${top.map(f=>`<li><a href="#card-${f.no}" data-go="${f.no}"><span class="mk ${f.status==="수정 필요"?"":"soft"}">${f.no}</span>${esc(f.title)}</a></li>`).join("")||"<li>따로 고칠 것이 없습니다</li>"}</ol>
+        ${(r.good||[]).length?`<p class="goodline"><b>잘된 점</b> ${esc(r.good[0].text)}</p>`:""}
+      </div>
     </div>
-    ${goods?`<div><h3>잘된 점</h3><ul class="good">${goods}</ul></div>`:""}
-    ${kwRows?`<div><h3>핵심 키워드 현황 <small>계속 가지고 가실 키워드</small></h3><table class="plain kwtable"><thead><tr><th>키워드</th><th>이 글에서</th><th>최근 30일 검색량</th></tr></thead><tbody>${kwRows}</tbody></table></div>`:""}
-    <div><h3>발행 전 체크리스트 <small>✅❌는 앱이 확인한 결과, ☐는 직접 확인해 주실 항목</small></h3><div class="check">${chk}</div></div>
-    <div><h3>전체 첨삭지 <small class="viewtag">${esc(r.view||"")}${r.view==="재구성 화면"?" — 실제 네이버 화면과 줄바꿈이 다를 수 있습니다":""}</small></h3><div class="proof">${proof}</div></div>
-    <div><h3>의견</h3><div class="cards">${cards||`<p class="hint">따로 드릴 의견이 없습니다.</p>`}</div></div>
+    <div class="split">
+      <div class="orig no-export"><div class="orighead"><h3>원문에 표시</h3><span class="viewtag">${hasFrame?"네이버 화면 그대로":hasCap?"올린 캡처":"재구성 화면 — 실제와 줄바꿈이 다를 수 있습니다"}</span></div>
+        <div class="origscroll" id="origscroll">${hasFrame||hasCap?"":`<div class="proof">${proof}</div>`}</div></div>
+      <div class="cards"><h3 class="cards-h">의견 ${shown.length}개</h3>${cards||`<p class="hint">따로 드릴 의견이 없습니다.</p>`}</div>
+    </div>
+    <details class="sec" open><summary><h3>키워드와 해시태그</h3><span class="sum">${(r.keywordTable||[]).filter(k=>k.where==="없음").length}개 키워드가 글에 없음 · 추천 태그 ${(TS.list||[]).length}개</span></summary>
+      <div class="secbody">
+        ${kwRows?`<table class="plain kwtable"><thead><tr><th>핵심 키워드</th><th>이 글에서</th><th>최근 30일 검색량</th><th>근거</th></tr></thead><tbody>${kwRows}</tbody></table>`:""}
+        <div><p class="lbl2">지금 글에 붙은 태그</p><div class="chips">${curTags}</div></div>
+        <div><div class="row" style="justify-content:space-between"><p class="lbl2">추천 해시태그 <small class="hint">상호 → 핵심 키워드 → 자동완성 → AI 제안 순, 숫자는 최근 30일 검색량</small></p><button class="btn ghost small no-export copy" data-copy="${esc((TS.list||[]).map(t=>"#"+t.tag).join(" "))}">모두 복사</button></div>
+          <div class="chips">${sugTags||`<span class="hint">추천할 태그가 없습니다</span>`}</div>
+          ${TS.note?`<p class="hint">${esc(TS.note)}</p>`:""}</div>
+      </div></details>
+    <details class="sec" open><summary><h3>AI 검색 대비</h3><span class="sum">${aiS.length?`${aiS.length-aiBad}/${aiS.length} 충족`:"AI 첨삭을 하면 점검합니다"}</span></summary>
+      <div class="secbody">
+        <p class="hint">네이버 AI 브리핑·ChatGPT 같은 AI 검색이 이 글을 답변 근거로 가져가기 쉬운지 봅니다. 충족해도 노출이 보장되지는 않습니다.</p>
+        <ul class="aich">${aiS.map(a=>`<li class="${a.ok?"ok":"no"}"><span class="st">${a.ok?"✅":"⚠"}</span><b>${esc(a.item)}</b><span>${esc(a.note)}</span></li>`).join("")}</ul>
+        ${sumBox.length?`<div class="fix"><span class="lbl">글 맨 위 3줄 요약</span><span class="sugg">${sumBox.map(esc).join("<br>")}</span><button class="btn ghost small no-export copy" data-copy="${esc(sumBox.join("\n"))}">복사</button></div>`:""}
+        ${faq.length?`<div class="fix"><span class="lbl">덧붙일 FAQ</span><span class="sugg">${faq.map(x=>`<b>Q. ${esc(x.q)}</b><br>A. ${esc(x.a)}`).join("<br><br>")}</span><button class="btn ghost small no-export copy" data-copy="${esc(faq.map(x=>"Q. "+x.q+"\nA. "+x.a).join("\n\n"))}">복사</button></div>`:""}
+      </div></details>
+    ${nextT?`<details class="sec" open><summary><h3>다음 글 추천</h3><span class="sum">이 글에 이어서 쓰면 좋은 글 ${(r.nextTopics||[]).length}편</span></summary><div class="secbody"><ol class="nexts">${nextT}</ol></div></details>`:""}
+    <details class="sec"><summary><h3>발행 전 체크리스트</h3><span class="sum">❌ ${nNo} · 직접 확인 ${nBox}</span></summary><div class="secbody"><div class="check">${chk}</div></div></details>
     <p class="foot">검수일 ${esc(r.createdAt)} · 업체 정보 확인일 ${esc((r.bizSnapshot||{}).placeCheckedAt||"미기록")} · 키워드 근거는 조회 시각 기준 · 이노브웨이</p>
   </div>`;
-  // 캡처 카드: 해당 부분을 잘라 붙임
-  $$(".excerpt").forEach(el=>{ const b=r.blocks[+el.dataset.bi]; if(b&&b.box&&r._capture){ const c=cropCanvas(b); if(c) el.appendChild(c) } });
+  const sc=$("#origscroll");
+  if(hasFrame){ const fr=naverFrame(r); sc.appendChild(fr); CUR._frame=fr }
+  else if(hasCap){ sc.appendChild(capOverlay(r)) }
+  $$(".excerpt[data-bi]").forEach(el=>{ const b=r.blocks[+el.dataset.bi]; if(b&&b.box&&r._capture){ const c=cropCanvas(b); if(c) el.appendChild(c) } });
+  $$(".card").forEach(c=>c.addEventListener("click",e=>{ if(e.target.closest("button,label,a,[contenteditable=true]")) return; if(CUR._frame&&CUR._frame._goto) CUR._frame._goto(c.dataset.no) }));
+  $$("[data-go]").forEach(a=>a.addEventListener("click",()=>{ if(CUR._frame&&CUR._frame._goto) CUR._frame._goto(a.dataset.go) }));
   $("#edBtn").onclick=()=>{ collectEdits(); EDIT=!EDIT; renderSheet() };
   $("#saveBtn").onclick=saveEdits;
   $("#pngBtn").onclick=exportPng;
-  $("#pdfBtn").onclick=()=>{ collectEdits(); window.print() };
-  $$(".copy").forEach(b=>b.onclick=async()=>{ const f=F.find(x=>x.no==b.dataset.no); try{ await navigator.clipboard.writeText(f.suggestion||""); b.textContent="복사함" }catch(e){ b.textContent="복사 안 됨" } });
+  $("#pdfBtn").onclick=()=>{ collectEdits(); $$("#sheet details").forEach(d=>d.open=true); window.print() };
+  $$(".copy").forEach(b=>b.onclick=async e=>{ e.stopPropagation(); try{ await navigator.clipboard.writeText(b.dataset.copy||""); b.textContent="복사함" }catch(err){ b.textContent="복사 안 됨" } });
   $$(".keep").forEach(c=>c.onchange=()=>{ const f=F.find(x=>x.no==c.dataset.no); f.show=c.checked; c.closest(".card").classList.toggle("off",!c.checked) });
 }
 function collectEdits(){ if(!CUR||!EDIT) return; const o=$("#opinion"); if(o) CUR.opinionText=o.innerText.trim()||OPINION_DEFAULT;
@@ -443,9 +562,10 @@ async function exportPng(){
     if(urls.length){ try{ const map=await api("imageData",{urls}); imgs.forEach(i=>{ if(map[i.dataset.src]){ i.removeAttribute("crossorigin"); i.src=map[i.dataset.src] } }) }catch(e){} }
     imgs.forEach(i=>{ i.loading="eager" });
     await Promise.race([Promise.all(imgs.map(i=>i.complete?0:new Promise(ok=>{i.onload=i.onerror=ok}))),new Promise(ok=>setTimeout(ok,8000))]);
+    const opened=$$("#sheet details").map(d=>{ const o=d.open; d.open=true; return o });
     sheet.classList.add("exporting"); sheet.style.width="540px";
     const canvas=await html2canvas(sheet,{scale:2,useCORS:true,backgroundColor:getComputedStyle(sheet).backgroundColor,width:540,windowWidth:900});
-    sheet.classList.remove("exporting"); sheet.style.width="";
+    sheet.classList.remove("exporting"); sheet.style.width=""; $$("#sheet details").forEach((d,i)=>d.open=opened[i]);
     const a=document.createElement("a"); a.href=canvas.toDataURL("image/png"); a.download=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}.png`; a.click();
     status($("#shStatus"),"이미지를 저장했습니다.");
   }catch(e){ sheet.classList.remove("exporting"); sheet.style.width=""; status($("#shStatus"),"이미지를 만들지 못했습니다. PDF로 저장해 주세요.",true) }

@@ -42,6 +42,14 @@ check('체크리스트: 지도 항목 ❌', R.checklist.find(c => c.item.startsW
 check('학원 업종 체크 항목 추가', R.checklist.some(c => c.group === '업종'));
 check('요약: 꼭 고쳐 주실 것', R.summary.must >= 1 && /꼭 고쳐/.test(R.summary.headline));
 check('편집 표시 [인용구]·[표] 남음 → 수정 필요', R.findings.some(f => f.title === '편집 표시가 글자로 남음' && /인용구/.test(f.comment)), R.findings.map(f => f.title));
+check('네이버 화면 HTML (스크립트 없음)', R.view === '네이버 화면' && R.viewHtml.length > 10000 && !/<script/i.test(R.viewHtml) && R.viewCss.length >= 2);
+check('블록에 화면 위치(ci) 기록', R.blocks.filter(b => b.type === 'text').every(b => typeof b.ci === 'number' && typeof b.pi === 'number'));
+check('글 태그 읽음(0개) → 태그 없음 권장', Array.isArray(R.tags) && R.tags.length === 0 && R.findings.some(f => f.title === '태그 없음'));
+check('추천 해시태그: 상호 먼저, 자동완성 포함, 30개 이하', R.tagSuggest.list[0].tag === '반포필즈수학' && R.tagSuggest.list.some(t => t.src === '자동완성') && R.tagSuggest.list.length <= 30, R.tagSuggest);
+check('검색량 키 없음 안내', /키를 넣으면/.test(R.tagSuggest.note));
+check('AI 검색 점검 항목', R.aiSearch.length === 3 && R.aiSearch.every(a => !/하세요/.test(a.note)), R.aiSearch);
+check('다음 글 추천 2편', R.nextTopics.length === 2 && R.nextTopics[0].keyword);
+check('요약 3줄·FAQ', R.summaryBox.length === 3 && R.faq.length === 1);
 check('저장됨', call('getReview', { id: R.id }).data.title === R.title);
 check('keyword_log 탭에 하루 1회 저장', s.__sheets.keyword_log.rows.length - 1 === R.evidence.length);
 

@@ -48,8 +48,15 @@ try {
   check('맨 위 안내 문구', (await page.textContent('#opinion')).startsWith('이 첨삭지는 정답을 정해 드리는 것이 아니라'));
   check('요약: 꼭 고쳐 주실 것', /꼭 고쳐 주실 것 \d+건/.test(sheetText));
   check('핵심 키워드 표', (await page.$$('.kwtable tbody tr')).length === 4);
+  check('태그 없음 표시', /태그 없음/.test(sheetText));
   check('체크리스트 ❌ 표시', (await page.$$('.check .st.no')).length >= 1);
-  check('전체 첨삭지에 빨간 번호', (await page.$$('.proof .mk')).length >= 1);
+  await page.waitForFunction(() => { const f = document.querySelector('.nframe'); return f && f.contentDocument && f.contentDocument.querySelectorAll('.br-box').length > 0; }, null, { timeout: 30000 }).catch(() => {});
+  const boxes = await page.evaluate(() => { const f = document.querySelector('.nframe'); return f && f.contentDocument ? f.contentDocument.querySelectorAll('.br-box').length : 0; });
+  check('네이버 화면 위에 빨간 번호 상자 (' + boxes + '개)', boxes >= 2);
+  check('먼저 고칠 것 3개', (await page.$$('.firsts li')).length === 3);
+  check('추천 해시태그와 모두 복사', (await page.$$('.chips .chip')).length >= 5 && !!(await page.$('button.copy[data-copy^="#반포필즈수학"]')));
+  check('AI 검색 대비 점검', (await page.$$('.aich li')).length === 3);
+  check('다음 글 추천', (await page.$$('.nexts li')).length === 2);
   const mapCard = await page.$('.card:has(h4:text("지도에 다른 장소가 연결됨"))');
   check('지도 카드와 근거 링크 2개', !!mapCard && (await mapCard.$$('.evid a')).length === 2);
   check('편집 표시 카드', /편집 표시가 글자로 남음/.test(sheetText));
@@ -95,7 +102,7 @@ try {
   await page.click('#rvGo'); await page.waitForFunction(() => /원고/.test((document.querySelector('#sheet .meta') || {}).textContent || ''), null, { timeout: 120000 });
   const t2 = await page.textContent('#sheet');
   check('원고: 전화번호 다름', /전화번호가 등록 정보와 다름/.test(t2));
-  check('원고: 재구성 화면 안내', /재구성 화면/.test(t2));
+  check('원고: 재구성 화면 안내', /재구성 화면/.test(t2) && (await page.$$('.proof .mk')).length >= 1);
 
   check('화면 오류 없음 ' + JSON.stringify(errors), errors.length === 0);
 } finally { await browser.close(); srv.kill(); }
