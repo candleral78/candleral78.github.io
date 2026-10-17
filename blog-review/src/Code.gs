@@ -929,7 +929,11 @@ function runSample() {
   };
   setRow_('biz', id, biz);
   var r = runReview_({ bizId: id, source: 'link', url: 'https://blog.naver.com/' + PROBE_TARGET.blogId + '/' + PROBE_TARGET.postNos[0], postType: '정보성', sponsored: 'no', aiImages: 'yes', keywords: ['반포 초등수학'] });
-  var msg = [r.title, r.summary.headline + ' / 권장 ' + r.summary.suggest + ' / 확인 ' + r.summary.check, r.aiError || 'AI 첨삭 완료']
+  var ts = r.tagSuggest || { list: [] };
+  var msg = [r.title, r.summary.headline + ' / 권장 ' + r.summary.suggest + ' / 확인 ' + r.summary.check, r.aiError || 'AI 첨삭 완료',
+    '화면: ' + r.view + ' / 글 태그: ' + (r.tags ? r.tags.length + '개' : '읽지 못함') + ' / 자동완성: ' + (ts.autocomplete ? '됨' : '안 됨'),
+    '추천 태그: ' + ts.list.map(function (t) { return t.tag + '(' + t.src + ')'; }).join(', '),
+    'AI 검색 점검 ' + (r.aiSearch || []).length + '개 / 다음 글 ' + (r.nextTopics || []).map(function (t) { return t.title; }).join(' | ')]
     .concat(r.findings.map(function (f) { return f.no + '. [' + f.status + '] ' + f.title; }));
   Logger.log(msg.join('\n')); return msg.join('\n');
 }
