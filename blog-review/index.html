@@ -252,7 +252,7 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
         <label>원고<small>첫 줄은 제목입니다. 사진 자리는 [사진], 지도는 [지도], 인용구는 [인용: 문장]으로 적어 주세요.</small><textarea id="rvText" rows="10"></textarea></label>
       </div>
       <div data-src="capture" hidden>
-        <label>휴대폰 화면 캡처<small>위에서부터 순서대로 여러 장 올려 주세요. 캡처는 저장하지 않고 이번 첨삭지에만 씁니다.</small><input type="file" id="rvImgs" accept="image/*" multiple></label>
+        <label>화면 캡처 또는 PDF<small>캡처 사진(여러 장이면 위에서부터 순서대로)이나 글을 저장한 PDF 파일을 올려 주세요. 올린 파일은 저장하지 않고 이번 첨삭지에만 씁니다.</small><input type="file" id="rvImgs" accept="image/*,application/pdf,.pdf" multiple></label>
         <div class="thumbs" id="rvThumbs"></div>
       </div>
       <div class="grid2">
@@ -400,7 +400,20 @@ async function toJpeg(file,maxW){
   const scale=Math.min(1,maxW/img.width), c=document.createElement("canvas"); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
   c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); return c.toDataURL("image/jpeg",.85);
 }
-$("#rvImgs").onchange=async e=>{ CAPTURE=await Promise.all([...e.target.files].slice(0,8).map(f=>toJpeg(f,1100))); $("#rvThumbs").innerHTML=CAPTURE.map((d,i)=>`<img src="${d}" alt="캡처 ${i+1}">`).join("") };
+const MAX_PAGES=15;
+function loadPdfJs(){ if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib); return new Promise((ok,no)=>{ const sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; sc.onload=()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; ok(pdfjsLib) }; sc.onerror=()=>no(new Error("PDF 읽기 도구를 불러오지 못했습니다.")); document.head.appendChild(sc) }) }
+// PDF는 쪽마다 그림으로 바꿔서 캡처처럼 읽습니다.
+async function pdfToJpegs(file,maxW,limit){ const lib=await loadPdfJs(), doc=await lib.getDocument({data:await file.arrayBuffer()}).promise, out=[];
+  for(let n=1;n<=doc.numPages&&out.length<limit;n++){ const pg=await doc.getPage(n), v1=pg.getViewport({scale:1}), vp=pg.getViewport({scale:maxW/v1.width}), c=document.createElement("canvas"); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+    const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); await pg.render({canvasContext:g,viewport:vp}).promise; out.push(c.toDataURL("image/jpeg",.85)) }
+  return {pages:out,total:doc.numPages} }
+$("#rvImgs").onchange=async e=>{ const files=[...e.target.files]; CAPTURE=[]; let skipped=0; $("#rvThumbs").innerHTML=""; status($("#rvStatus"),"파일을 읽는 중입니다…");
+  try{ for(const f of files){ if(CAPTURE.length>=MAX_PAGES){ skipped++; continue }
+      if(f.type==="application/pdf"||/\.pdf$/i.test(f.name)){ const r=await pdfToJpegs(f,1100,MAX_PAGES-CAPTURE.length); CAPTURE.push(...r.pages); skipped+=r.total-r.pages.length }
+      else CAPTURE.push(await toJpeg(f,1100)) }
+    $("#rvThumbs").innerHTML=CAPTURE.map((d,i)=>`<img src="${d}" alt="캡처 ${i+1}">`).join("");
+    status($("#rvStatus"),CAPTURE.length+"쪽(장)을 올렸습니다."+(skipped?` 한 번에 ${MAX_PAGES}쪽까지 읽어서 뒤의 ${skipped}쪽은 뺐습니다.`:""));
+  }catch(err){ CAPTURE=[]; status($("#rvStatus"),"파일을 읽지 못했습니다. "+err.message,true) } };
 $("#rvGo").onclick=async()=>{
   const bizId=$("#rvBiz").value; if(!bizId) return status($("#rvStatus"),"업체를 먼저 등록해 주세요.",true);
   const src=srcVal(), req={bizId,source:src,keywords:$("#rvKw").value.split(",").map(s=>s.trim()).filter(Boolean).slice(0,3),postType:$("#rvType").value,sponsored:$("input[name=sp]:checked").value,aiImages:$("input[name=ai]:checked").value};

@@ -120,6 +120,14 @@ try {
   check('원고: 전화번호 다름', /전화번호가 등록 정보와 다름/.test(t2));
   check('원고: 재구성 화면 안내', /재구성 화면/.test(t2) && (await page.$$('.proof .mk')).length >= 1);
 
+  console.log('== PDF 파일 올리기 (화면 캡처)');
+  await page.click('[data-tab=review]'); await page.check('input[name=src][value=capture]', { force: true });
+  await page.setInputFiles('#rvImgs', { name: '글.pdf', mimeType: 'application/pdf', buffer: fs.readFileSync(dlPath) });
+  await page.waitForFunction(() => /쪽\(장\)을 올렸습니다|읽지 못했습니다/.test(document.querySelector('#rvStatus').textContent), null, { timeout: 60000 });
+  const pdfThumbs = (await page.$$('#rvThumbs img')).length;
+  check('PDF 쪽을 그림으로 바꿈 (' + pdfThumbs + '쪽) · ' + await page.textContent('#rvStatus'), pdfThumbs === dpages);
+  await page.click('#rvGo'); await page.waitForFunction(() => /실제 화면|캡처/.test((document.querySelector('#sheet .meta') || {}).textContent || ''), null, { timeout: 120000 });
+  check('PDF로 검수 완료', !!(await page.$('#sheet')));
   check('화면 오류 없음 ' + JSON.stringify(errors), errors.length === 0);
 } finally { await browser.close(); srv.kill(); }
 console.log(fails ? `\n실패 ${fails}건` : '\n모두 통과');
