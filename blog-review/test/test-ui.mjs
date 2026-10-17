@@ -50,8 +50,8 @@ try {
   check('핵심 키워드 표', (await page.$$('.kwtable tbody tr')).length === 4);
   check('태그 없음 표시', /태그 없음/.test(sheetText));
   check('체크리스트 ❌ 표시', (await page.$$('.check .st.no')).length >= 1);
-  await page.waitForFunction(() => { const f = document.querySelector('.nframe'); return f && f.contentDocument && f.contentDocument.querySelectorAll('.br-box').length > 0; }, null, { timeout: 30000 }).catch(() => {});
-  const boxes = await page.evaluate(() => { const f = document.querySelector('.nframe'); return f && f.contentDocument ? f.contentDocument.querySelectorAll('.br-box').length : 0; });
+  await page.waitForFunction(() => { const f = document.querySelector('.nview'); return f && f.shadowRoot && f.shadowRoot.querySelectorAll('.br-no').length > 0; }, null, { timeout: 30000 }).catch(() => {});
+  const boxes = await page.evaluate(() => { const f = document.querySelector('.nview'); return f && f.shadowRoot ? f.shadowRoot.querySelectorAll('.br-no').length : 0; });
   check('네이버 화면 위에 빨간 번호 상자 (' + boxes + '개)', boxes >= 2);
   check('먼저 고칠 것 3개', (await page.$$('.firsts li')).length === 3);
   check('추천 해시태그와 모두 복사', (await page.$$('.chips .chip')).length >= 5 && !!(await page.$('button.copy[data-copy^="#반포필즈수학"]')));
@@ -65,23 +65,25 @@ try {
   check('코멘트에 "~하세요" 없음', !/[가-힣]하세요/.test(ours.replace(/안녕하세요/g, '')));
   await page.screenshot({ path: shot('2-첨삭지'), fullPage: true });
 
-  console.log('== 고치기와 저장');
+  console.log('== 문장 고치기 (끝내면 자동 저장)');
+  check('버튼은 PDF로 저장·문장 고치기 둘', !(await page.$('#pngBtn')) && !(await page.$('#saveBtn')) && !!(await page.$('#pdfBtn')));
   await page.click('#edBtn');
   await page.waitForSelector('.comment[contenteditable=true]');
   await page.evaluate(() => { document.querySelector('#card-1 .comment').innerText = '대표님, 지도를 학원으로 다시 선택해 주세요.'; });
   const lastKeep = (await page.$$('.keep')).pop(); await lastKeep.uncheck();
   await page.click('#edBtn');
-  check('고친 코멘트 반영', (await page.textContent('#card-1 .comment')).includes('다시 선택해 주세요'));
-  check('뺀 카드는 보이지 않음', (await page.$$('.card')).length === (await page.$$('.card')).length);
-  await page.click('#saveBtn'); await page.waitForFunction(() => /저장했습니다/.test(document.querySelector('#shStatus').textContent));
-  check('저장', true);
+  await page.waitForFunction(() => /저장했습니다/.test(document.querySelector('#shStatus').textContent));
+  check('고친 코멘트 반영·자동 저장', (await page.textContent('#card-1 .comment')).includes('다시 선택해 주세요'));
 
-  console.log('== 이미지 저장');
-  const dl = page.waitForEvent('download', { timeout: 90000 }).catch(() => null);
-  await page.click('#pngBtn'); const d = await dl;
-  if (!d) { console.log('  상태:', await page.textContent('#shStatus')); throw new Error('내려받기 없음'); } const p = await d.path();
-  const size = fs.statSync(p).size; fs.copyFileSync(p, shot('3-카톡이미지'));
-  check('PNG 내려받기 (' + Math.round(size / 1024) + 'KB)', size > 50000);
+  console.log('== PDF');
+  await page.evaluate(() => { document.querySelectorAll('#sheet details').forEach(d => d.open = true); document.body.classList.add('printing'); const v = document.querySelector('.nview'); if (v && v._draw) v._draw(); });
+  await page.waitForTimeout(800);
+  await page.emulateMedia({ media: 'print' });
+  const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '11mm', right: '11mm' } });
+  fs.writeFileSync(shot('5-첨삭지').replace('.png', '.pdf'), pdf);
+  const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  check('PDF 여러 쪽 (' + pages + '쪽, ' + Math.round(pdf.length / 1024) + 'KB)', pages >= 3);
+  await page.emulateMedia({ media: 'screen' }); await page.evaluate(() => document.body.classList.remove('printing'));
 
   console.log('== 기록');
   await page.click('[data-tab=history]'); await page.waitForSelector('#hsList button');

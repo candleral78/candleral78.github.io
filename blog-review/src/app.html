@@ -153,7 +153,8 @@ mark.q{background:none;color:inherit;text-decoration:underline wavy var(--pen);t
 .orighead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .origscroll{height:78vh;overflow:auto;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:inset 0 0 0 6px var(--sunk)}
 .origscroll .proof{border:0;max-width:none}
-.nframe{width:100%;border:0;display:block;min-height:600px;background:#fff}
+.nview{display:block}
+.toolbar{margin:6px 0 10px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
 .capwrap canvas{width:100%;display:block}
 .cards-h{margin-bottom:-4px}
 .card{cursor:pointer}
@@ -179,7 +180,23 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
 @media (max-width:980px){ .split{grid-template-columns:1fr} .orig{position:static} .origscroll{height:70vh} }
 @media (max-width:620px){ .glance{grid-template-columns:1fr} .aich li{grid-template-columns:1.6em 1fr} .aich li span:last-child{grid-column:2} }
 .exporting .split{grid-template-columns:1fr} .exporting .glance{grid-template-columns:1fr} .exporting .aich li{grid-template-columns:1.6em 1fr} .exporting .aich li span:last-child{grid-column:2}
-@media print{ body{background:#fff} header.top,.tabs,.no-print,.only-edit,.orig,#reviewForm{display:none!important} .split{display:block} .wrap{max-width:none;padding:0} .sheet{border:0;padding:0} .card.off{display:none} .card{break-inside:avoid} }
+@page{size:A4;margin:12mm 11mm}
+@media print{
+  html,body{background:#fff!important;color:#000}
+  header.top,.tabs,.no-print,.only-edit,#reviewForm,.copy,.toolbar{display:none!important}
+  .wrap{max-width:none;padding:0;gap:0} .sheet{border:0;padding:0;gap:16px;background:#fff}
+  .glance{grid-template-columns:1.1fr 1fr;break-inside:avoid}
+  .split{display:contents} .cards{order:1} details.sec{order:2} .orig{order:3;position:static;width:430px;max-width:100%;break-before:page} .foot{order:4}
+  .orighead h3::after{content:" (부록)"} .origscroll,.printing .origscroll{height:auto!important;overflow:visible!important;border:1px solid #ccc;border-radius:6px;box-shadow:none}
+  .orighead{break-after:avoid}
+  .card{break-inside:avoid;cursor:default} .card.off{display:none}
+  details.sec{break-inside:auto} details.sec>summary h3::before{content:""}
+  .fix,.excerpt,.aich li,.check .it,.kwtable tr{break-inside:avoid}
+  a{color:#000;text-decoration:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.printing .origscroll{height:auto!important;overflow:visible!important}
+.printing .orig{width:430px}
 @media (prefers-reduced-motion:no-preference){ .card{scroll-margin-top:16px} }
 </style>
 
@@ -409,32 +426,32 @@ function capOverlay(r,byNo){
         g.fillStyle="#fff"; g.font=`700 ${fs}px sans-serif`; g.textAlign="center"; g.textBaseline="middle"; g.fillText(String(f.no),cx,cy+1) })) } });
   return wrap;
 }
-function naverFrame(r){
-  // 발행 글: 네이버 화면 코드를 그대로 그리고 위에 번호 상자를 올립니다.
-  const fr=document.createElement("iframe"); fr.className="nframe"; fr.title="블로그 원문";
-  fr.srcdoc=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="https://m.blog.naver.com/" target="_blank">${(r.viewCss||[]).map(u=>`<link rel="stylesheet" href="${esc(u)}">`).join("")}
-  <style>body{margin:0;background:#fff;padding:8px 14px 40px 36px;position:relative}.se-viewer{position:relative}img{max-width:100%!important;height:auto!important}
-  .br-box{position:absolute;border:2.5px solid #d0162f;border-radius:4px;pointer-events:none;z-index:50}
-  .br-box.soft{border-style:dashed}
-  .br-no{position:absolute;left:-30px;top:-2px;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif;text-align:center;pointer-events:auto;cursor:pointer}
-  .br-box.soft .br-no{background:#fff;color:#d0162f;border:2px solid #d0162f;line-height:20px}</style></head>
-  <body><div class="se-viewer se-theme-default">${r.viewHtml}</div></body></html>`;
-  fr.onload=()=>{ const d=fr.contentDocument; if(!d) return;
-    const comps=[...d.querySelectorAll(".se-component")];
-    function target(b){ const c=comps[b.ci]; if(!c) return null; if(b.type==="text"&&typeof b.pi==="number"){ const ps=[...c.querySelectorAll("p.se-text-paragraph")].filter(p=>p.textContent.replace(/​/g,"").trim()); return ps[b.pi]||c } return c }
-    function draw(){ d.querySelectorAll(".br-box").forEach(x=>x.remove()); const host=d.body, hb=host.getBoundingClientRect(); const used={};
-      (r.findings||[]).filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).filter(x=>x>=0).slice(0,3).forEach(bi=>{ const b=r.blocks[bi]; if(!b) return; const el=target(b); if(!el) return;
-        const rc=el.getBoundingClientRect(); const box=d.createElement("div"); box.className="br-box"+(f.status==="수정 필요"?"":" soft");
-        const k=Math.round(rc.top); const shift=(used[k]=(used[k]||0)+1)-1;
-        Object.assign(box.style,{left:(rc.left-hb.left-4)+"px",top:(rc.top-hb.top-4)+"px",width:(rc.width+8)+"px",height:(rc.height+8)+"px"});
-        const n=d.createElement("span"); n.className="br-no"; n.textContent=f.no; n.style.top=(-2+shift*28)+"px"; n.title=f.title; n.onclick=()=>{ const cd=document.getElementById("card-"+f.no); if(cd) cd.scrollIntoView({behavior:"smooth",block:"start"}) };
-        box.appendChild(n); box.dataset.no=f.no; host.appendChild(box) })) }
-    draw(); setTimeout(draw,800); d.querySelectorAll("img").forEach(i=>i.addEventListener("load",draw));
-    fr._goto=no=>{ const bx=d.querySelector(`.br-box[data-no="${no}"]`); if(bx){ const sc=fr.parentElement; sc.scrollTo({top:Math.max(0,bx.offsetTop-80),behavior:"smooth"}) } };
-    fr.style.height=Math.max(600,d.documentElement.scrollHeight)+"px";
-    new (window.ResizeObserver||function(){this.observe=()=>{}})(()=>{ fr.style.height=d.documentElement.scrollHeight+"px"; draw() }).observe(d.body);
-  };
-  return fr;
+function naverView(r){
+  // 발행 글: 네이버 화면 코드를 그대로(그림자 영역 안에서 네이버 스타일로) 그리고 위에 번호 상자를 올립니다. PDF에서도 쪽이 나뉘어 끝까지 찍힙니다.
+  const host=document.createElement("div"); host.className="nview"; const root=host.attachShadow({mode:"open"});
+  root.innerHTML=`${(r.viewCss||[]).map(u=>`<link rel="stylesheet" href="${esc(u)}">`).join("")}
+  <style>:host{display:block;background:#fff;color:#111}.wrap{position:relative;padding:8px 14px 30px 38px;background:#fff}img{max-width:100%!important;height:auto!important}
+  a{pointer-events:none;color:inherit}
+  .br-mark{position:relative!important;outline:2.5px solid #d0162f;outline-offset:3px;border-radius:2px}
+  .br-mark.br-soft{outline-style:dashed}
+  .br-no{position:absolute;left:-34px;top:-2px;z-index:50;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif;text-align:center;pointer-events:auto;cursor:pointer;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .br-no.soft{background:#fff;color:#d0162f;border:2px solid #d0162f;line-height:20px}</style>
+  <div class="wrap"><div class="se-viewer se-theme-default">${r.viewHtml}</div></div>`;
+  const wrap=root.querySelector(".wrap"), comps=[...root.querySelectorAll(".se-component")];
+  function target(b){ const c=comps[b.ci]; if(!c) return null; if(b.type==="text"&&typeof b.pi==="number"){ const ps=[...c.querySelectorAll("p.se-text-paragraph")].filter(p=>p.textContent.replace(/\u200b/g,"").trim()); return ps[b.pi]||c } return c }
+  function draw(){
+    root.querySelectorAll(".br-no").forEach(x=>x.remove()); root.querySelectorAll("[data-br]").forEach(x=>{ x.removeAttribute("data-br"); x.classList.remove("br-mark","br-soft") });
+    (r.findings||[]).filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).filter(x=>x>=0).slice(0,3).forEach(bi=>{ const b=r.blocks[bi]; if(!b) return; const el=target(b); if(!el) return;
+      // 표시를 글 요소 자체에 붙여서 화면 폭이나 PDF로 바뀌어도 위치가 어긋나지 않게 합니다.
+      el.classList.add("br-mark"); if(f.status!=="수정 필요"&&!el.dataset.br) el.classList.add("br-soft"); if(f.status==="수정 필요") el.classList.remove("br-soft");
+      const k=(el.dataset.br?el.dataset.br.split(",").length:0); el.dataset.br=(el.dataset.br?el.dataset.br+",":"")+f.no;
+      const n=document.createElement("span"); n.className="br-no"+(f.status==="수정 필요"?"":" soft"); n.textContent=f.no; n.style.top=(k*28-2)+"px"; n.title=f.title;
+      n.onclick=()=>{ const cd=document.getElementById("card-"+f.no); if(cd) cd.scrollIntoView({behavior:"smooth",block:"start"}) };
+      el.appendChild(n) })) }
+  host._draw=draw;
+  host._goto=no=>{ const bx=[...root.querySelectorAll("[data-br]")].find(e=>e.dataset.br.split(",").includes(String(no))), sc=host.parentElement; if(bx&&sc){ const t=bx.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop-80; sc.scrollTo({top:Math.max(0,t),behavior:"smooth"}) } };
+  setTimeout(draw,0);
+  return host;
 }
 function vol(x){ if(x.pc==null&&x.mobile==null) return ""; const n=v=>typeof v==="number"?v:0; const sum=n(x.pc)+n(x.mobile); const lt=String(x.pc).includes("<")||String(x.mobile).includes("<"); return lt&&!sum?"10 미만":sum.toLocaleString("ko-KR")+(lt?"+":"") }
 function renderSheet(){
@@ -473,12 +490,10 @@ function renderSheet(){
   const nextT=(r.nextTopics||[]).map((t,i)=>`<li><b>${esc(t.title)}</b><span class="hint">검색할 말: ${esc(t.keyword)}${vol(t)?` · 최근 30일 ${esc(vol(t))}회`:""}</span><span>${esc(t.why)}</span></li>`).join("");
   const sumBox=(r.summaryBox||[]).filter(Boolean), faq=r.faq||[];
   $("#result").innerHTML=`
-  <div class="row no-print" style="margin:6px 0 10px">
-    <button class="btn ghost small" id="edBtn">${EDIT?"고치기 끝내기":"코멘트 고치기"}</button>
-    <button class="btn ghost small" id="saveBtn">고친 내용 저장</button>
-    <button class="btn small" id="pngBtn">카톡용 이미지 저장</button>
-    <button class="btn ghost small" id="pdfBtn">PDF로 저장</button>
-    <span class="status" id="shStatus"></span>
+  <div class="row no-print toolbar">
+    <button class="btn" id="pdfBtn">PDF로 저장</button>
+    <button class="btn ghost small" id="edBtn">${EDIT?"고치기 끝내고 저장":"문장 고치기"}</button>
+    <span class="status" id="shStatus">${EDIT?"카드 문장을 눌러 고치고, 보내지 않을 카드는 체크를 빼 주세요.":"보내기 전에 표현을 바꾸고 싶을 때만 문장 고치기를 누르시면 됩니다."}</span>
   </div>
   <div class="sheet ${EDIT?"editing":""}" id="sheet">
     <div class="masthead"><h2>${esc(r.bizName)} 블로그 첨삭지</h2><span class="meta">${esc(r.createdAt.slice(0,10))} · ${esc(r.source==="link"?"발행 글":r.source==="text"?"발행 전 원고":"화면 캡처")}</span></div>
@@ -497,7 +512,7 @@ function renderSheet(){
       </div>
     </div>
     <div class="split">
-      <div class="orig no-export"><div class="orighead"><h3>원문에 표시</h3><span class="viewtag">${hasFrame?"네이버 화면 그대로":hasCap?"올린 캡처":"재구성 화면 — 실제와 줄바꿈이 다를 수 있습니다"}</span></div>
+      <div class="orig"><div class="orighead"><h3>원문에 표시</h3><span class="viewtag">${hasFrame?"네이버 화면 그대로":hasCap?"올린 캡처":"재구성 화면 — 실제와 줄바꿈이 다를 수 있습니다"}</span></div>
         <div class="origscroll" id="origscroll">${hasFrame||hasCap?"":`<div class="proof">${proof}</div>`}</div></div>
       <div class="cards"><h3 class="cards-h">의견 ${shown.length}개</h3>${cards||`<p class="hint">따로 드릴 의견이 없습니다.</p>`}</div>
     </div>
@@ -521,15 +536,13 @@ function renderSheet(){
     <p class="foot">검수일 ${esc(r.createdAt)} · 업체 정보 확인일 ${esc((r.bizSnapshot||{}).placeCheckedAt||"미기록")} · 키워드 근거는 조회 시각 기준 · 이노브웨이</p>
   </div>`;
   const sc=$("#origscroll");
-  if(hasFrame){ const fr=naverFrame(r); sc.appendChild(fr); CUR._frame=fr }
+  if(hasFrame){ const v=naverView(r); sc.appendChild(v); CUR._frame=v }
   else if(hasCap){ sc.appendChild(capOverlay(r)) }
   $$(".excerpt[data-bi]").forEach(el=>{ const b=r.blocks[+el.dataset.bi]; if(b&&b.box&&r._capture){ const c=cropCanvas(b); if(c) el.appendChild(c) } });
   $$(".card").forEach(c=>c.addEventListener("click",e=>{ if(e.target.closest("button,label,a,[contenteditable=true]")) return; if(CUR._frame&&CUR._frame._goto) CUR._frame._goto(c.dataset.no) }));
   $$("[data-go]").forEach(a=>a.addEventListener("click",()=>{ if(CUR._frame&&CUR._frame._goto) CUR._frame._goto(a.dataset.go) }));
-  $("#edBtn").onclick=()=>{ collectEdits(); EDIT=!EDIT; renderSheet() };
-  $("#saveBtn").onclick=saveEdits;
-  $("#pngBtn").onclick=exportPng;
-  $("#pdfBtn").onclick=()=>{ collectEdits(); $$("#sheet details").forEach(d=>d.open=true); window.print() };
+  $("#edBtn").onclick=async()=>{ collectEdits(); const was=EDIT; EDIT=!EDIT; renderSheet(); if(was) await saveEdits() };
+  $("#pdfBtn").onclick=printPdf;
   $$(".copy").forEach(b=>b.onclick=async e=>{ e.stopPropagation(); try{ await navigator.clipboard.writeText(b.dataset.copy||""); b.textContent="복사함" }catch(err){ b.textContent="복사 안 됨" } });
   $$(".keep").forEach(c=>c.onchange=()=>{ const f=F.find(x=>x.no==c.dataset.no); f.show=c.checked; c.closest(".card").classList.toggle("off",!c.checked) });
 }
@@ -538,6 +551,15 @@ function collectEdits(){ if(!CUR||!EDIT) return; const o=$("#opinion"); if(o) CU
   $$(".sugg[data-no]").forEach(p=>{ const f=CUR.findings.find(x=>x.no==p.dataset.no); if(f) f.suggestion=p.innerText.trim() }) }
 async function saveEdits(){ collectEdits(); status($("#shStatus"),"저장하는 중…");
   try{ await api("saveReview",{id:CUR.id,patch:{findings:CUR.findings,opinionText:CUR.opinionText||""}}); status($("#shStatus"),"저장했습니다.") }catch(e){ status($("#shStatus"),e.message,true) } }
+async function printPdf(){
+  if(EDIT){ collectEdits(); EDIT=false; renderSheet(); await saveEdits() }
+  const ds=$$("#sheet details"), opened=ds.map(d=>d.open); ds.forEach(d=>d.open=true);
+  const t=document.title; document.title=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}`;
+  document.body.classList.add("printing"); if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,0);
+  await new Promise(ok=>setTimeout(ok,300));
+  window.print();
+  document.title=t; document.body.classList.remove("printing"); ds.forEach((d,i)=>d.open=opened[i]); if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50);
+}
 async function exportPng(){
   collectEdits(); const wasEdit=EDIT; if(EDIT){ EDIT=false; renderSheet() }
   const sheet=$("#sheet"); status($("#shStatus"),"이미지를 만드는 중…");
