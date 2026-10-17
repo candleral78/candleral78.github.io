@@ -707,8 +707,13 @@ var INDUSTRY_CHECKS = {
 /* ---------- 당일 키워드 근거 ---------- */
 function keywordEvidence_(kw, postUrl) {
   var day = todayKst_(), id = day + '|' + nsp_(kw), cached = getRow_('keyword_log', id), e;
-  if (cached) e = cached;
-  else {
+  if (cached) {
+    e = cached;
+    // 키를 넣기 전에 저장된 기록이면 검색량만 다시 조회합니다.
+    if (!e.volume && e.volumeSkipped && prop_('SEARCHAD_API_KEY', '')) {
+      try { var kk = searchAdKeywords_([kw]); if (kk.main) { e.volume = kk.main[0] || null; e.related = kk.related.slice(0, 5); delete e.volumeSkipped; setRow_('keyword_log', id, JSON.parse(JSON.stringify(e))); } } catch (x0) { }
+    }
+  } else {
     e = { kw: kw, day: day, at: nowKst_(), searchLink: 'https://m.search.naver.com/search.naver?where=m_blog&query=' + encodeURIComponent(kw) };
     try { var sr = get_(e.searchLink); e.screenTop = sr.code === 200 ? parseSearch_(sr.text).slice(0, 10) : null; if (sr.code !== 200) e.screenError = 'HTTP ' + sr.code; }
     catch (x) { e.screenTop = null; e.screenError = String(x.message || x); }
