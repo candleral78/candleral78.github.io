@@ -126,7 +126,8 @@ mark.q{background:none;color:inherit;text-decoration:underline wavy var(--pen);t
 .comment[contenteditable=true],.sugg[contenteditable=true]{background:var(--surface);border:1px dashed var(--muted);border-radius:4px;padding:6px 8px}
 .fix{display:flex;gap:10px;align-items:flex-start;background:var(--ok-soft);border-radius:6px;padding:10px 12px}
 .fix .lbl{font-size:.8rem;color:var(--ok);font-weight:700;white-space:nowrap;padding-top:2px}
-.fix .sugg{flex:1;font-size:.93rem}
+.fix .sugg{flex:1;font-size:.93rem;white-space:pre-line}
+.how{margin:0;padding:10px 12px 10px 30px;background:var(--surface);border-radius:6px;font-size:.93rem}.how li{margin:2px 0}.howh{font-size:.8rem;font-weight:700;color:var(--muted);margin:0 0 -4px}
 .evid{font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
 .evid b{color:var(--ink);font-weight:500}
 .foot{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
@@ -497,6 +498,7 @@ function renderSheet(){
         <label class="only-edit no-export" style="flex-direction:row;gap:6px;margin-left:auto;font-size:.85rem"><input type="checkbox" class="keep" data-no="${f.no}" ${f.show!==false?"checked":""}>보내기에 넣기</label></div>
       ${ex}
       <p class="comment" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.comment)}</p>
+      ${(f.how||[]).length?`<p class="howh">고치는 방법</p><ol class="how">${f.how.map(h=>`<li>${esc(h)}</li>`).join("")}</ol>`:""}
       ${f.suggestion||EDIT?`<div class="fix"><span class="lbl">고친 예시</span><span class="sugg" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.suggestion||"")}</span><button class="btn ghost small no-export copy" data-copy="${esc(f.suggestion||"")}">복사</button></div>`:""}
       <ul class="evid"><li>근거 · ${esc(f.source==="AI"?"AI 첨삭":"앱 확인")} · ${esc(f.area)}</li>${ev}</ul>
     </article>` }).join("");
@@ -550,7 +552,7 @@ function renderSheet(){
       </div></details>
     ${nextT?`<details class="sec" open><summary><h3>다음 글 추천</h3><span class="sum">이 글에 이어서 쓰면 좋은 글 ${(r.nextTopics||[]).length}편</span></summary><div class="secbody"><ol class="nexts">${nextT}</ol></div></details>`:""}
     <details class="sec"><summary><h3>발행 전 체크리스트</h3><span class="sum">❌ ${nNo} · 직접 확인 ${nBox}</span></summary><div class="secbody"><div class="check">${chk}</div></div></details>
-    <p class="foot">검수일 ${esc(r.createdAt)} · 업체 정보 확인일 ${esc((r.bizSnapshot||{}).placeCheckedAt||"미기록")} · 키워드 근거는 조회 시각 기준 · 이노브웨이</p>
+    <p class="foot">검수일 ${esc(r.createdAt)} · 업체 정보 확인일 ${esc((r.bizSnapshot||{}).placeCheckedAt||"미기록")} · 키워드 근거는 조회 시각 기준</p>
   </div>`;
   const sc=$("#origscroll");
   if(hasFrame){ const v=naverView(r); sc.appendChild(v); CUR._frame=v }

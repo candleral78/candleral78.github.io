@@ -61,6 +61,8 @@ try {
   check('지도 카드와 근거 링크 2개', !!mapCard && (await mapCard.$$('.evid a')).length === 2);
   check('편집 표시 카드', /편집 표시가 글자로 남음/.test(sheetText));
   check('잘된 점', /잘된 점/.test(sheetText));
+  check('고치는 방법 목록', (await page.$$('.card .how li')).length >= 4);
+  check('이노브웨이 표시 없음', !/이노브웨이/.test(sheetText));
   const ours = (await page.$$eval('.comment, .sugg, .good li, .opinion', els => els.map(e => e.textContent).join(' ')));
   check('코멘트에 "~하세요" 없음', !/[가-힣]하세요/.test(ours.replace(/안녕하세요/g, '')));
   await page.screenshot({ path: shot('2-첨삭지'), fullPage: true });

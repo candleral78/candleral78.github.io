@@ -761,6 +761,45 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     evidence: [ev('측정', '태그 0개', 'https://blog.naver.com/' + (doc.blogId || '') + '/' + (doc.logNo || ''))]
   });
 
+  // 17. 고치는 방법과 기본 예시 — AI 첨삭이 되면 이 글에 맞춘 예시로 바뀝니다.
+  var nm = names.length ? names[0] : (biz.name || '저희 가게'), kw0 = (ctx.keywords && ctx.keywords[0]) || ((biz.coreKeywords || []).filter(function (k) { return k.type !== '상호'; })[0] || {}).kw || '';
+  var HOW = {
+    '본문 분량': ['손님이 자주 묻는 질문과 대표님의 답', '실제 진행 순서(처음 오셨을 때 → 상담 → 수업·작업)', '준비물·걸리는 시간·찾아오는 길', '이 중 한두 가지를 한 문단씩 더해 주시면 됩니다.'],
+    '사진 수': ['직접 찍은 사진을 더 넣어 주세요: 입구·내부·작업(수업) 장면·결과물·대표님', '첫 사진은 글 내용을 가장 잘 보여 주는 사진으로'],
+    '지도(장소) 첨부': ['네이버 블로그 글쓰기 화면 위쪽의 "장소" 버튼을 누릅니다', '"' + nm + '"을 검색해 플레이스에 등록된 우리 가게를 고릅니다', '글 맨 끝에 넣고 발행합니다'],
+    '지도에 다른 장소가 연결됨': ['글 수정 화면에서 아래 지도를 지웁니다', '위쪽 "장소" 버튼 → "' + nm + '" 검색 → 주소가 같은지 보고 선택', '다시 발행한 뒤 지도를 눌러 우리 가게로 열리는지 확인합니다'],
+    '편집 표시가 글자로 남음': ['글 수정 화면에서 [인용구]·[표] 같은 글자를 지웁니다', '[인용구] 자리는 위쪽 따옴표 모양 "인용구" 버튼으로, [표] 자리는 "표" 버튼으로 다시 넣습니다', '[사진 …] 자리는 해당 사진을 넣고 글자는 지웁니다'],
+    '플레이스·예약 링크': ['글 끝에 "장소" 버튼으로 우리 가게를 넣거나', '네이버 예약·톡톡 링크를 한 줄 넣어 주세요'],
+    '태그 없음': ['글 수정 화면 맨 아래 "태그 입력"에 아래 태그를 붙여 넣습니다', '아래 "키워드와 해시태그"의 추천 목록에서 더 고르셔도 됩니다'],
+    '다른 글과 같은 사진': ['이번 글 내용에 맞는 사진을 새로 찍어 바꿔 넣어 주세요'],
+    '내용 나눔': ['내용이 바뀌는 곳마다 위쪽 "소제목" 서식(또는 인용구)을 넣습니다', '소제목은 손님이 물을 질문으로 씁니다'],
+    '소제목 수': ['글을 3~5덩어리로 나누고, 덩어리마다 맨 앞 줄을 소제목으로 바꿉니다', '네이버 에디터 글자 모양에서 "소제목"을 고르거나 인용구로 넣습니다', '소제목은 손님이 물을 질문으로 씁니다(예시 참고)'],
+    '질문형 소제목': ['소제목 끝을 "~나요?", "~할까요?" 같은 질문으로 바꿉니다'],
+    '소제목 아래 내용이 짧음': ['소제목마다 ① 질문에 대한 답 ② 이유 ③ 우리 가게 방식 ④ 손님 상황별 조건 ⑤ 예약·방문 안내 순서로 문장을 더합니다'],
+    '표·묻고 답하기 없음': ['가격·수업 시간·준비물처럼 딱 떨어지는 정보를 표로 정리하거나', '손님이 자주 묻는 질문 3개를 Q/A로 넣어 주세요'],
+    '첫 문단에 결론': ['"안녕하세요" 인사 다음 문장부터 제목의 질문에 대한 답을 먼저 씁니다', '인사말은 짧게 두거나 빼도 됩니다'],
+    '작성일 표기': ['글 맨 마지막 줄에 "작성일: 날짜"를 넣습니다']
+  };
+  var EX = {
+    '소제목 수': ['소제목 1: ' + (kw0 ? kw0 + ', 무엇을 먼저 봐야 하나요?' : '처음 오시면 무엇부터 하나요?'), '소제목 2: ' + nm + '은 어떻게 진행하나요?', '소제목 3: 어떤 분께 잘 맞나요?', '소제목 4: 상담·예약은 어떻게 하나요?'].join('\n'),
+    '질문형 소제목': '"수업 방식" → "수업은 어떻게 진행되나요?"\n"오시는 길" → "주차는 어디에 하면 되나요?"',
+    '내용 나눔': ['소제목 1: ' + (kw0 ? kw0 + ', 무엇을 먼저 봐야 하나요?' : '처음 오시면 무엇부터 하나요?'), '소제목 2: ' + nm + '은 어떻게 진행하나요?', '소제목 3: 상담·예약은 어떻게 하나요?'].join('\n'),
+    '첫 문단에 결론': '안녕하세요, ' + nm + '입니다. ' + (title ? '"' + title.replace(/\s{2,}/g, ' ') + '"에 대한 답부터 말씀드리면, ' : '') + '[확인 필요: 제목 질문에 대한 대표님의 답 한 문장]입니다. 그 이유와 ' + nm + '에서 실제로 하는 방법을 아래에 정리했습니다.',
+    '표·묻고 답하기 없음': 'Q. 상담은 어떻게 예약하나요?\nA. ' + (biz.phone ? biz.phone + '로 전화 주시면 됩니다.' : '[확인 필요: 예약 방법]') + ' [확인 필요: 상담 시간]\n\nQ. 수업(이용) 시간은 어떻게 되나요?\nA. [확인 필요: 시간]\n\nQ. 주차가 되나요?\nA. [확인 필요: 주차 안내]',
+    '메인 키워드': kw0 ? nm + '은 ' + kw0 + '을(를) 찾는 분께 [확인 필요: 우리 가게의 답 한 줄]을 안내해 드립니다.' : '',
+    '본문에 상호가 없음': '안녕하세요, ' + nm + '입니다.',
+    '상호가 제목·첫 문단에 없음': '안녕하세요, ' + nm + '입니다.',
+    '작성일 표기': '작성일: ' + todayKst_()
+  };
+  F.forEach(function (f) {
+    var key = /^메인 키워드/.test(f.title) ? '메인 키워드' : f.title;
+    if (HOW[key] && !f.how) f.how = HOW[key];
+    if (!f.suggestion && EX[key]) f.suggestion = EX[key];
+    if (/^(쓰지 않는 표현|확인이 필요한 표현)/.test(f.title) && !f.how) f.how = ['"' + f.quote + '" 대신 대표님이 직접 본 것, 손님이 한 말, 확인된 숫자로 바꿔 주세요', '근거가 있으면 근거(연도·인원·출처)를 함께 적어 주세요'];
+    if (f.title === 'AI가 쓴 것 같은 문장' && !f.how) f.how = ['인사·예고 문장("알아보겠습니다" 등)은 지우고 바로 본론으로 시작합니다', '대표님이 손님께 말하듯 고쳐 주세요'];
+    if (f.title === '같은 키워드 반복' && !f.how) f.how = ['반복된 곳 절반은 "저희", "이곳", 상품 이름처럼 다른 말로 바꿔 주세요'];
+  });
+
   // 체크리스트 (앱 확인 결과를 미리 표시)
   function st(cond) { return cond === null ? '확인 불가' : cond ? '✅' : '❌'; }
   var hasMapOk = maps.some(function (m) { return m.placeId && m.placeId === String(biz.placeId); });
@@ -903,8 +942,11 @@ function aiReview_(biz, doc, ctx, machine) {
     '- faq: 이 글에 덧붙이면 좋은 자주 묻는 질문 3개와 글에 있는 사실만으로 쓴 답(모르면 [확인 필요]).',
     '- nextTopics: 이 글 다음에 이어서 쓰면 좋은 글 3편. title(블로그 제목), keyword(검색할 말), why(한 문장, 검색한 사람 입장의 이유). 업체 업종·지역·핵심 키워드와 맞게.',
     '- tags: 이 글에 붙이면 좋은 해시태그 10개(띄어쓰기 없이, # 없이). 상호와 지역+업종을 먼저.',
+    '- examples: 아래 "예시가 필요한 지적" 각각에 대해, 대표가 그대로 옮겨 쓸 수 있는 이 글에 맞춘 고친 예시. 이 글의 실제 내용과 문장을 바탕으로 씁니다. 첫 문단 결론이면 첫 문단을 고쳐 쓴 2~3문장, 소제목이면 이 글 내용에 맞는 질문형 소제목 3~5개를 "소제목 1: ... (어느 문단 앞)" 형식으로 줄마다, 표·묻고 답하기면 글에 있는 사실로 만든 "항목 | 내용" 표나 Q/A 3개, 내용이 짧으면 덧붙일 문장, 표현 문제면 그 문장을 고친 문장. 글에 없는 가격·날짜·숫자·효능·경험은 지어내지 않고 [확인 필요: 무엇]으로 남깁니다. "~하세요"를 쓰지 않습니다.',
+    '[예시가 필요한 지적]',
+    machine.findings.filter(function (f) { return EXAMPLE_TITLES_.test(f.title); }).map(function (f) { return f.id + ' ' + f.title + ': ' + f.comment; }).join('\n') || '없음',
     '',
-    'JSON만 출력: {"good":[{"block":0,"text":"..."}],"findings":[{"block":0,"quote":"...","area":"품질","level":"권장","title":"짧은 제목","fact":"...","reason":"...","request":"...","suggestion":"..."}],"aiSearch":[{"item":"첫 문단에서 질문에 바로 답함","ok":false,"note":"..."}],"summaryBox":["...","...","..."],"faq":[{"q":"...","a":"..."}],"nextTopics":[{"title":"...","keyword":"...","why":"..."}],"tags":["..."]}'
+    'JSON만 출력: {"good":[{"block":0,"text":"..."}],"findings":[{"block":0,"quote":"...","area":"품질","level":"권장","title":"짧은 제목","fact":"...","reason":"...","request":"...","suggestion":"..."}],"aiSearch":[{"item":"첫 문단에서 질문에 바로 답함","ok":false,"note":"..."}],"summaryBox":["...","...","..."],"faq":[{"q":"...","a":"..."}],"nextTopics":[{"title":"...","keyword":"...","why":"..."}],"tags":["..."],"examples":[{"id":"m1","example":"..."}]}'
   ].join('\n');
   var res = gemini_(prompt, [], true, '');
   var j = parseJson_(res.text) || {};
@@ -930,11 +972,13 @@ function aiReview_(biz, doc, ctx, machine) {
   var nextTopics = (j.nextTopics || []).slice(0, 3).map(function (x) { return { title: String(x.title || ''), keyword: String(x.keyword || ''), why: softenTone_(String(x.why || '')) }; }).filter(function (x) { return x.title; });
   var faq = (j.faq || []).slice(0, 3).map(function (x) { return { q: String(x.q || ''), a: String(x.a || '') }; }).filter(function (x) { return x.q; });
   var summaryBox = (j.summaryBox || []).slice(0, 3).map(String);
-  return { findings: findings, good: good, dropped: dropped, model: res.model, aiSearch: aiSearch, nextTopics: nextTopics, faq: faq, summaryBox: summaryBox, tags: (j.tags || []).slice(0, 12).map(String) };
+  var examples = {}; (j.examples || []).forEach(function (x) { if (x && x.id && x.example) examples[String(x.id)] = softenTone_(String(x.example)).slice(0, 1200); });
+  return { examples: examples, findings: findings, good: good, dropped: dropped, model: res.model, aiSearch: aiSearch, nextTopics: nextTopics, faq: faq, summaryBox: summaryBox, tags: (j.tags || []).slice(0, 12).map(String) };
 }
+var EXAMPLE_TITLES_ = /^(첫 문단에 결론|소제목 수|질문형 소제목|소제목 아래 내용이 짧음|표·묻고 답하기 없음|내용 나눔|본문 분량|메인 키워드|본문에 상호가 없음|상호가 제목·첫 문단에 없음|쓰지 않는 표현|확인이 필요한 표현|AI가 쓴 것 같은 문장|마지막 안내 문장)/;
 /** "~하세요" 지시형을 "~해 주세요"로 바꿉니다. */
 function softenTone_(s) {
-  return String(s || '').replace(/([가-힣]+)하세요([.!]?)/g, '$1해 주세요$2').replace(/넣으세요/g, '넣어 주세요').replace(/바꾸세요/g, '바꿔 주세요')
+  return String(s || '').replace(/([가-힣]*)하세요([.!]?)/g, function (m, w, p) { return /안녕$/.test(w) ? m : w + '해 주세요' + p; }).replace(/넣으세요/g, '넣어 주세요').replace(/바꾸세요/g, '바꿔 주세요')
     .replace(/고치세요/g, '고쳐 주세요').replace(/쓰세요/g, '써 주세요').replace(/주세요\s*주세요/g, '주세요');
 }
 
@@ -960,6 +1004,11 @@ function runReview_(req) {
   if (req.skipAi) ai.error = 'AI 첨삭을 건너뛰었습니다.';
   else { try { ai = aiReview_(biz, doc, ctx, machine); } catch (e) { ai.error = e.code === 'quota' ? '오늘 무료 AI 한도를 모두 썼습니다. 기계 검사 결과만 저장했습니다.' : 'AI 첨삭 실패: ' + (e.message || e); } }
   var tags = tagSuggest_(biz, ctx, ai.tags || []);
+  // 기계 검사 지적에 이 글에 맞춘 AI 예시를 붙입니다.
+  machine.findings.forEach(function (f) {
+    if (ai.examples && ai.examples[f.id] && EXAMPLE_TITLES_.test(f.title)) { f.suggestion = ai.examples[f.id]; f.exampleBy = 'AI'; }
+    if (f.title === '태그 없음' && tags && tags.list) f.suggestion = tags.list.slice(0, 12).map(function (t) { return '#' + t.tag; }).join(' ');
+  });
   // 다음 글 추천 키워드의 검색량 (키가 있을 때만)
   var nt = ai.nextTopics || [];
   if (nt.length) { var kv = searchAdKeywords_(nt.map(function (x) { return x.keyword; })); if (kv.main) nt.forEach(function (x) { kv.main.forEach(function (v) { if (nsp_(v.keyword) === nsp_(x.keyword)) { x.pc = v.pc; x.mobile = v.mobile; } }); }); }

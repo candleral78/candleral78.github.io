@@ -50,6 +50,11 @@ check('검색량 키 없음 안내', /키를 넣으면/.test(R.tagSuggest.note))
 check('AI 검색 점검 항목', R.aiSearch.length === 3 && R.aiSearch.every(a => !/하세요/.test(a.note)), R.aiSearch);
 check('다음 글 추천 2편', R.nextTopics.length === 2 && R.nextTopics[0].keyword);
 check('요약 3줄·FAQ', R.summaryBox.length === 3 && R.faq.length === 1);
+const firstF = R.findings.find(f => f.title === '첫 문단에 결론'), headF = R.findings.find(f => f.title === '소제목 수');
+check('첫 문단 결론: 이 글에 맞춘 AI 예시 + 고치는 방법', firstF && firstF.exampleBy === 'AI' && /반포필즈수학은/.test(firstF.suggestion) && !/하세요/.test(firstF.suggestion) && firstF.how.length >= 1, [firstF.suggestion, firstF.how, firstF.exampleBy]);
+check('소제목 수: 소제목 예시 줄마다', headF && /소제목 1:/.test(headF.suggestion) && headF.how.length >= 2, headF);
+check('편집 표시: 고치는 방법', R.findings.find(f => f.title === '편집 표시가 글자로 남음').how.length >= 2);
+check('태그 없음: 붙여 넣을 태그', /^#반포필즈수학/.test(R.findings.find(f => f.title === '태그 없음').suggestion));
 check('저장됨', call('getReview', { id: R.id }).data.title === R.title);
 check('keyword_log 탭에 하루 1회 저장', s.__sheets.keyword_log.rows.length - 1 === R.evidence.length);
 
