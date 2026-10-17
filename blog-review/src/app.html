@@ -1,0 +1,449 @@
+<title>블로그 첨삭</title>
+<style>
+/*FONTFACE*/
+/* 컨설턴트 1인용 검수 도구. 글쓰기 앱과 같은 색·글꼴을 쓰고, 첨삭지만 빨간 펜 교정지처럼 보이게 한다. */
+:root{
+  --bg:#f7f4f4; --surface:#ffffff; --sunk:#f0ebec; --ink:#1d1618; --muted:#6b5f62; --line:#e2d9db;
+  --accent:#c0112f; --on-accent:#ffffff; --accent-soft:#fbe9ec; --ok:#1c7a4a; --ok-soft:#e5f3eb; --warn:#9a5600; --warn-soft:#fbf0e1;
+  --pen:#d0162f; --paper:#fffdfb;
+  --font:"Gmarket Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171213; --surface:#211a1c; --sunk:#2a2124; --ink:#f1eaeb; --muted:#ab9fa2; --line:#3a2e31;
+  --accent:#ea4a63; --on-accent:#1a0d10; --accent-soft:#3a1a21; --ok:#5cc48d; --ok-soft:#173326; --warn:#e2a84b; --warn-soft:#3a2a12;
+  --pen:#ff5a72; --paper:#1d1719; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#171213; --surface:#211a1c; --sunk:#2a2124; --ink:#f1eaeb; --muted:#ab9fa2; --line:#3a2e31;
+  --accent:#ea4a63; --on-accent:#1a0d10; --accent-soft:#3a1a21; --ok:#5cc48d; --ok-soft:#173326; --warn:#e2a84b; --warn-soft:#3a2a12;
+  --pen:#ff5a72; --paper:#1d1719; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.65;font-weight:500;word-break:keep-all;overflow-wrap:anywhere}
+.hint,.status,small{font-weight:300}
+b,strong,h1,h2,h3,th{font-weight:700}
+input,textarea,select,button{font:inherit;font-weight:500}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 72px;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+h1{font-size:1.5rem;line-height:1.25;margin:0}
+h2{font-size:1.18rem;margin:0}
+h3{font-size:1rem;margin:0}
+p{margin:0}
+.hint{color:var(--muted);font-size:.9rem}
+.tabs{display:flex;gap:6px}
+.tabs button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:7px 14px;font-size:.9rem;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 18px;display:flex;flex-direction:column;gap:16px}
+label{display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+label small{color:var(--muted)}
+input[type=text],input[type=url],input[type=password],input[type=number],textarea,select{color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+textarea{min-height:90px;resize:vertical}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font-weight:700;border-radius:8px;padding:11px 18px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;min-height:44px}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.btn.small{padding:6px 12px;min-height:34px;font-size:.86rem;font-weight:500}
+.btn:disabled{opacity:.5;cursor:default}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg label{flex-direction:row;align-items:center;gap:6px;padding:8px 14px;cursor:pointer;font-size:.92rem;border-right:1px solid var(--line)}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--ink);color:var(--bg)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+legend{font-size:.95rem;padding:0;margin-bottom:6px}
+.status{color:var(--muted);font-size:.92rem;min-height:1.4em}
+.status.err{color:var(--accent);font-weight:500}
+.notice{background:var(--accent-soft);border-radius:8px;padding:12px 14px;font-size:.92rem}
+table.plain{border-collapse:collapse;width:100%;font-size:.9rem}
+table.plain th,table.plain td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+table.plain th{color:var(--muted);font-weight:500;white-space:nowrap}
+.kwrow{display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;align-items:center}
+.list{display:flex;flex-direction:column}
+.list button{display:flex;justify-content:space-between;gap:12px;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 4px;text-align:left;cursor:pointer;color:var(--ink)}
+.list button:hover{background:var(--sunk)}
+.list small{color:var(--muted)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs img{width:72px;height:96px;object-fit:cover;object-position:top;border-radius:6px;border:1px solid var(--line)}
+a{color:var(--accent)}
+
+/* ---------- 첨삭지 ---------- */
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:26px 24px 30px;display:flex;flex-direction:column;gap:26px}
+.sheet .masthead{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.sheet .masthead h2{font-size:1.25rem}
+.sheet .masthead .meta{font-size:.85rem;color:var(--muted)}
+.opinion{border:1.5px solid var(--pen);color:var(--ink);border-radius:4px;padding:12px 14px;font-size:.92rem;line-height:1.7}
+.opinion[contenteditable=true]{background:var(--surface)}
+.sheet h3{font-size:1.02rem;display:flex;gap:8px;align-items:baseline}
+.sheet h3 small{color:var(--muted);font-size:.82rem}
+.verdict{display:flex;flex-direction:column;gap:6px}
+.verdict .head{font-size:1.35rem;font-weight:700;line-height:1.3}
+.verdict .head.must{color:var(--pen)}
+.counts{display:flex;gap:18px;flex-wrap:wrap;font-size:.92rem}
+.counts span b{font-size:1.1rem;margin-right:3px}
+.facts{font-size:.85rem;color:var(--muted)}
+.good{display:flex;flex-direction:column;gap:6px;margin:0;padding-left:1.1em}
+.kwtable td.miss{color:var(--pen);font-weight:700}
+.kwtable .ev{font-size:.8rem;color:var(--muted)}
+.check{display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+.check .g{font-weight:700;margin-top:8px}
+.check .it{display:grid;grid-template-columns:4.6em 1fr 2.6em;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dotted var(--line)}
+.check .st{font-weight:700;font-size:.85rem}
+.check .st.no{color:var(--pen)} .check .st.yes{color:var(--ok)}
+.check .who{color:var(--muted);font-size:.78rem;text-align:right}
+.check .it.hot{background:var(--accent-soft)}
+
+/* 전체 첨삭지: 재구성한 글 + 여백의 빨간 번호 */
+.proof{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:18px 18px 18px 52px;display:flex;flex-direction:column;gap:10px;max-width:640px}
+.proof .blk{position:relative;font-size:.93rem;line-height:1.75}
+.proof .blk.title{font-size:1.12rem;font-weight:700;line-height:1.45}
+.proof .blk.heading{font-weight:700}
+.proof .blk.quote{border-left:3px solid var(--ink);padding-left:12px}
+.proof .blk.divider{border-top:1px solid var(--line);margin:4px 0}
+.proof .blk.img img{max-width:240px;max-height:200px;border-radius:3px;display:block}
+.proof .blk.ph{font-size:.82rem;color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:6px 10px}
+.proof .blk.flag{outline:1.5px solid var(--pen);outline-offset:3px;border-radius:2px}
+.marks{position:absolute;left:-40px;top:0;display:flex;flex-direction:column;gap:3px}
+.mk{width:24px;height:24px;border-radius:50%;background:var(--pen);color:#fff;font-size:.78rem;font-weight:700;display:grid;place-items:center;line-height:1;text-decoration:none}
+.mk.soft{background:none;color:var(--pen);border:1.5px solid var(--pen)}
+mark.q{background:none;color:inherit;text-decoration:underline wavy var(--pen);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.viewtag{font-size:.78rem;color:var(--muted)}
+
+/* 첨삭 카드 */
+.cards{display:flex;flex-direction:column;gap:18px}
+.card{border-top:2px solid var(--ink);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.card.off{opacity:.45}
+.card .ch{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.card .ch h4{margin:0;font-size:1rem}
+.tag{font-size:.78rem;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--muted)}
+.tag.must{background:var(--pen);border-color:var(--pen);color:#fff}
+.tag.check{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.tag.suggest{border-color:var(--ink);color:var(--ink)}
+.excerpt{border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:12px 14px;font-size:.9rem;line-height:1.75;max-width:600px}
+.excerpt img,.excerpt canvas{max-width:100%;max-height:300px;display:block;border-radius:3px}
+.excerpt .ctx{color:var(--muted)}
+.comment{font-size:.95rem;line-height:1.75}
+.comment[contenteditable=true],.sugg[contenteditable=true]{background:var(--surface);border:1px dashed var(--muted);border-radius:4px;padding:6px 8px}
+.fix{display:flex;gap:10px;align-items:flex-start;background:var(--ok-soft);border-radius:6px;padding:10px 12px}
+.fix .lbl{font-size:.8rem;color:var(--ok);font-weight:700;white-space:nowrap;padding-top:2px}
+.fix .sugg{flex:1;font-size:.93rem}
+.evid{font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.evid b{color:var(--ink);font-weight:500}
+.foot{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.only-edit{display:none}
+.editing .only-edit{display:flex}
+.exporting .only-edit,.exporting .no-export{display:none!important}
+.exporting .card.off{display:none}
+@media (max-width:560px){ .sheet{padding:18px 14px} .proof{padding-left:40px} .marks{left:-32px} .check .it{grid-template-columns:4em 1fr} .check .who{display:none} }
+@media print{ body{background:#fff} header.top,.tabs,.no-print,.only-edit{display:none!important} .wrap{max-width:none;padding:0} .sheet{border:0;padding:0} .card.off{display:none} .card{break-inside:avoid} }
+@media (prefers-reduced-motion:no-preference){ .card{scroll-margin-top:16px} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div><h1>블로그 첨삭</h1><p class="hint">업체 기준으로 블로그 글을 검수하고 대표님께 보낼 첨삭지를 만듭니다</p></div>
+    <nav class="tabs" role="tablist" id="tabs" hidden>
+      <button role="tab" data-tab="review" aria-selected="true">검수</button>
+      <button role="tab" data-tab="biz" aria-selected="false">업체</button>
+      <button role="tab" data-tab="history" aria-selected="false">기록</button>
+    </nav>
+  </header>
+
+  <!-- 들어가기 -->
+  <section class="panel" id="login">
+    <h2>암호를 넣어 주세요</h2>
+    <label>암호<input type="password" id="pw" autocomplete="current-password"></label>
+    <div class="row"><button class="btn" id="loginBtn">들어가기</button><span class="status" id="loginStatus"></span></div>
+  </section>
+
+  <!-- 검수 -->
+  <div id="tab-review" hidden>
+    <section class="panel" id="reviewForm">
+      <h2>검수할 글</h2>
+      <label>업체<select id="rvBiz"></select></label>
+      <fieldset><legend>글 넣는 방법</legend>
+        <div class="seg" id="rvSource">
+          <label><input type="radio" name="src" value="link" checked>발행 글 링크</label>
+          <label><input type="radio" name="src" value="text">원고 붙여넣기</label>
+          <label><input type="radio" name="src" value="capture">화면 캡처</label>
+        </div>
+      </fieldset>
+      <label data-src="link">블로그 글 주소<input type="url" id="rvUrl" placeholder="https://blog.naver.com/아이디/글번호"></label>
+      <div data-src="text" hidden class="grid2" style="grid-template-columns:1fr">
+        <label>원고<small>첫 줄은 제목입니다. 사진 자리는 [사진], 지도는 [지도], 인용구는 [인용: 문장]으로 적어 주세요.</small><textarea id="rvText" rows="10"></textarea></label>
+      </div>
+      <div data-src="capture" hidden>
+        <label>휴대폰 화면 캡처<small>위에서부터 순서대로 여러 장 올려 주세요. 캡처는 저장하지 않고 이번 첨삭지에만 씁니다.</small><input type="file" id="rvImgs" accept="image/*" multiple></label>
+        <div class="thumbs" id="rvThumbs"></div>
+      </div>
+      <div class="grid2">
+        <label>이번 글 목표 키워드<small>쉼표로 구분, 최대 3개. 업체 핵심 키워드는 자동으로 함께 봅니다.</small><input type="text" id="rvKw" placeholder="예: 반포 초등수학"></label>
+        <label>글 유형<select id="rvType"><option value="">고르지 않음</option><option>방문 후기</option><option>업체 소개</option><option>상품·서비스 소개</option><option>행사 안내</option><option>정보성</option></select></label>
+      </div>
+      <div class="grid2">
+        <fieldset><legend>협찬·지원을 받은 글인가요?</legend>
+          <div class="seg"><label><input type="radio" name="sp" value="no">아니요</label><label><input type="radio" name="sp" value="yes">예</label><label><input type="radio" name="sp" value="" checked>모름</label></div>
+        </fieldset>
+        <fieldset><legend>AI로 만든 이미지가 있나요?</legend>
+          <div class="seg"><label><input type="radio" name="ai" value="no">없음</label><label><input type="radio" name="ai" value="yes">있음</label><label><input type="radio" name="ai" value="person">인물 포함</label><label><input type="radio" name="ai" value="" checked>모름</label></div>
+        </fieldset>
+      </div>
+      <div class="row"><button class="btn" id="rvGo">검수 시작</button><span class="status" id="rvStatus" role="status"></span></div>
+    </section>
+    <div id="result"></div>
+  </div>
+
+  <!-- 업체 -->
+  <div id="tab-biz" hidden>
+    <section class="panel">
+      <div class="row" style="justify-content:space-between"><h2>업체</h2><button class="btn small" id="bizNew">새 업체</button></div>
+      <div class="list" id="bizList"></div>
+    </section>
+    <section class="panel" id="bizForm" hidden>
+      <h2 id="bizFormTitle">업체 등록</h2>
+      <div class="notice">플레이스 정보는 구글 서버에서 자동으로 읽히지 않아 <b>플레이스 화면 캡처</b>로 채웁니다. 캡처를 올리면 칸이 채워지고 확인일이 남습니다.</div>
+      <label>플레이스 화면 캡처<input type="file" id="bzCap" accept="image/*" multiple></label>
+      <span class="status" id="bzCapStatus"></span>
+      <div class="grid2">
+        <label>업체명<input type="text" id="bzName"></label>
+        <label>업종<select id="bzInd"><option>학원·교육</option><option>음식점·식품</option><option>의료·미용</option><option>숙박·레저</option><option>기타</option></select></label>
+        <label>플레이스 주소<small>네이버 지도에서 업체를 연 주소를 그대로 붙여 넣어 주세요.</small><input type="url" id="bzPlace"></label>
+        <label>블로그 주소<input type="url" id="bzBlog" placeholder="https://blog.naver.com/아이디"></label>
+        <label>주소<input type="text" id="bzAddr"></label>
+        <label>전화<input type="text" id="bzPhone"></label>
+        <label>영업시간·휴무<input type="text" id="bzHours"></label>
+        <label>플레이스 확인일<input type="text" id="bzChecked" placeholder="2026-10-17"></label>
+      </div>
+      <fieldset><legend>핵심 키워드<small class="hint"> — 30일마다 다시 점검합니다</small></legend>
+        <div id="kwRows" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div><button class="btn ghost small" id="kwAdd">키워드 추가</button></div>
+      </fieldset>
+      <fieldset><legend>업체 기준</legend>
+        <table class="plain"><thead><tr><th>항목</th><th>값</th><th>구분</th></tr></thead><tbody id="ruleRows"></tbody></table>
+      </fieldset>
+      <label>업체 메모<small>AI 첨삭이 참고합니다. 예: 원장 1인 수업, 초·중·고 모두 지도</small><textarea id="bzNote" rows="3"></textarea></label>
+      <div class="row"><button class="btn" id="bzSave">저장</button><button class="btn ghost" id="bzCancel">닫기</button><span class="status" id="bzStatus"></span></div>
+    </section>
+  </div>
+
+  <!-- 기록 -->
+  <div id="tab-history" hidden>
+    <section class="panel">
+      <h2>검수 기록</h2>
+      <label>업체<select id="hsBiz"><option value="">전체</option></select></label>
+      <div class="list" id="hsList"></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nsp=s=>String(s||"").replace(/\s+/g,"");
+const AUTH={adminPw:sessionStorage.getItem("br_pw")||""};
+const OPINION_DEFAULT="이 첨삭지는 정답을 정해 드리는 것이 아니라, 검수 기준과 조회 자료를 바탕으로 드리는 컨설턴트의 의견입니다. 대표님 업체의 사정이나 의도와 다른 부분이 있다면 그대로 두셔도 괜찮고, 말씀해 주시면 다음 검수에 반영하겠습니다. 검색 결과와 검색량은 조회한 시점의 자료이며, 이 의견을 따르더라도 검색 노출이 보장되지는 않습니다.";
+let BIZ=[], CUR=null, CAPTURE=[], EDIT=false;
+
+async function api(action,payload){
+  let r; try{ r=await fetch(window.BR_API,{method:"POST",body:JSON.stringify(Object.assign({action,adminPw:AUTH.adminPw},payload||{}))}) }catch(e){ throw {message:"서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요."} }
+  let j; try{ j=await r.json() }catch(e){ throw {message:"서버 응답을 읽지 못했습니다."} }
+  if(!j.ok) throw {code:j.code,message:j.message||"오류가 났습니다."};
+  return j.data;
+}
+function status(el,msg,err){ el.textContent=msg||""; el.classList.toggle("err",!!err) }
+
+/* ---------- 들어가기 ---------- */
+async function login(pw){
+  AUTH.adminPw=pw; status($("#loginStatus"),"확인하는 중…");
+  try{ const p=await api("ping"); if(!p.admin) throw {message:"암호가 맞지 않습니다."};
+    sessionStorage.setItem("br_pw",pw); $("#login").hidden=true; $("#tabs").hidden=false; show("review"); await loadBiz();
+    if(!p.gemini) status($("#rvStatus"),"AI 키가 없어 기계 검사만 합니다.");
+  }catch(e){ status($("#loginStatus"),e.message,true); AUTH.adminPw="" }
+}
+$("#loginBtn").onclick=()=>login($("#pw").value.trim());
+$("#pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login($("#pw").value.trim()) });
+function show(t){ $$("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); ["review","biz","history"].forEach(x=>$("#tab-"+x).hidden=x!==t); if(t==="history") loadHistory() }
+$$("#tabs button").forEach(b=>b.onclick=()=>show(b.dataset.tab));
+
+/* ---------- 업체 ---------- */
+const RULES=[["minChars","본문 분량(공백 제외 글자)",1500],["minPhotos","사진 수",5],["requireMap","지도(장소) 첨부",""],["maxRepeat","같은 키워드 반복 한도",10]];
+async function loadBiz(){
+  BIZ=await api("listBiz");
+  $("#bizList").innerHTML=BIZ.length?BIZ.map(b=>`<button data-id="${esc(b.id)}"><span>${esc(b.name)}</span><small>${esc(b.industry||"")}</small></button>`).join(""):`<p class="hint">등록한 업체가 없습니다. 새 업체를 눌러 첫 업체를 등록해 주세요.</p>`;
+  $$("#bizList button").forEach(x=>x.onclick=()=>openBiz(x.dataset.id));
+  const opts=BIZ.map(b=>`<option value="${esc(b.id)}">${esc(b.name)}</option>`).join("");
+  const keep=$("#rvBiz").value||ls.get("br_lastBiz"); $("#rvBiz").innerHTML=opts||`<option value="">먼저 업체를 등록해 주세요</option>`; if(keep&&BIZ.some(b=>b.id===keep)) $("#rvBiz").value=keep;
+  $("#hsBiz").innerHTML=`<option value="">전체</option>`+opts;
+}
+let EDIT_BIZ=null;
+function kwRow(k){ const d=document.createElement("div"); d.className="kwrow";
+  d.innerHTML=`<input type="text" class="kw" value="${esc(k.kw||"")}" placeholder="키워드" aria-label="키워드"><select class="kt" aria-label="구분">${["상호","지역+업종","대표 상품","차별점"].map(t=>`<option ${t===k.type?"selected":""}>${t}</option>`).join("")}</select><button class="btn ghost small" type="button">빼기</button>`;
+  d.querySelector("button").onclick=()=>d.remove(); $("#kwRows").appendChild(d) }
+function fillBiz(b){
+  b=b||{}; $("#bzName").value=b.name||""; $("#bzInd").value=b.industry||"기타"; $("#bzPlace").value=b.placeUrl||(b.placeId?"https://map.naver.com/p/entry/place/"+b.placeId:"");
+  $("#bzBlog").value=b.blogUrl||(b.blogId?"https://blog.naver.com/"+b.blogId:""); $("#bzAddr").value=b.address||""; $("#bzPhone").value=b.phone||""; $("#bzHours").value=b.hours||""; $("#bzChecked").value=b.placeCheckedAt||""; $("#bzNote").value=b.guideNote||"";
+  $("#kwRows").innerHTML=""; (b.coreKeywords&&b.coreKeywords.length?b.coreKeywords:[{kw:b.name||"",type:"상호"},{kw:"",type:"지역+업종"}]).forEach(kwRow);
+  const r=b.rules||{};
+  $("#ruleRows").innerHTML=RULES.map(([k,label,def])=>{ const v=r[k]||{}; const lvl=v.level||"권장";
+    return `<tr data-k="${k}"><td>${label}</td><td>${def===""?"—":`<input type="number" class="rv" value="${esc(v.value||def)}" aria-label="${label} 값" style="max-width:7em">`}</td><td><select class="rl" aria-label="${label} 구분">${["필수","권장","선택"].map(x=>`<option ${x===lvl?"selected":""}>${x}</option>`).join("")}</select></td></tr>` }).join("");
+}
+async function openBiz(id){ EDIT_BIZ=id; $("#bizFormTitle").textContent=id?"업체 정보":"업체 등록"; $("#bizForm").hidden=false; fillBiz(id?await api("getBiz",{id}):null); $("#bizForm").scrollIntoView({behavior:"smooth",block:"start"}) }
+$("#bizNew").onclick=()=>openBiz(null);
+$("#bzCancel").onclick=()=>{ $("#bizForm").hidden=true };
+$("#kwAdd").onclick=()=>kwRow({type:"지역+업종"});
+$("#bzCap").onchange=async e=>{
+  const files=[...e.target.files]; if(!files.length) return; status($("#bzCapStatus"),"캡처를 읽는 중… (20초 정도)");
+  try{ const imgs=await Promise.all(files.map(f=>toJpeg(f,1600))); const p=await api("readPlaceCapture",{images:imgs.map(x=>x.split(",")[1])});
+    if(p.name&&!$("#bzName").value) $("#bzName").value=p.name; if(p.address) $("#bzAddr").value=p.address; if(p.phone) $("#bzPhone").value=p.phone;
+    if(p.hours) $("#bzHours").value=[p.hours,p.closed].filter(Boolean).join(" / "); $("#bzChecked").value=p.checkedAt||"";
+    if(p.name&&$$("#kwRows .kw")[0]&&!$$("#kwRows .kw")[0].value) $$("#kwRows .kw")[0].value=p.name;
+    status($("#bzCapStatus"),"채웠습니다. 칸이 맞는지 확인하고 저장해 주세요.");
+  }catch(err){ status($("#bzCapStatus"),err.message,true) } };
+$("#bzSave").onclick=async()=>{
+  const rules={}; $$("#ruleRows tr").forEach(tr=>{ const v=tr.querySelector(".rv"); rules[tr.dataset.k]={value:v?+v.value:"",level:tr.querySelector(".rl").value} });
+  const biz={ name:$("#bzName").value.trim(), industry:$("#bzInd").value, placeUrl:$("#bzPlace").value.trim(), blogUrl:$("#bzBlog").value.trim(), address:$("#bzAddr").value.trim(), phone:$("#bzPhone").value.trim(), hours:$("#bzHours").value.trim(), placeCheckedAt:$("#bzChecked").value.trim(), guideNote:$("#bzNote").value.trim(),
+    coreKeywords:$$("#kwRows .kwrow").map(r=>({kw:r.querySelector(".kw").value.trim(),type:r.querySelector(".kt").value})).filter(k=>k.kw), rules };
+  if(!biz.name) return status($("#bzStatus"),"업체명을 넣어 주세요.",true);
+  if(biz.placeUrl && !/place\/\d{5,}|^\d{5,}$/.test(biz.placeUrl)) return status($("#bzStatus"),"플레이스 주소에서 장소 번호를 찾지 못했습니다. 지도에서 업체를 연 주소를 붙여 넣어 주세요.",true);
+  status($("#bzStatus"),"저장하는 중…");
+  try{ const id=await api("saveBiz",{id:EDIT_BIZ,biz}); EDIT_BIZ=id; await loadBiz(); $("#rvBiz").value=id; status($("#bzStatus"),"저장했습니다.") }catch(e){ status($("#bzStatus"),e.message,true) } };
+
+/* ---------- 검수 ---------- */
+const srcVal=()=>$("input[name=src]:checked").value;
+$$("input[name=src]").forEach(r=>r.onchange=()=>{ $$("[data-src]").forEach(el=>el.hidden=el.dataset.src!==srcVal()) });
+async function toJpeg(file,maxW){
+  const url=URL.createObjectURL(file); const img=await new Promise((ok,no)=>{const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src=url});
+  const scale=Math.min(1,maxW/img.width), c=document.createElement("canvas"); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); return c.toDataURL("image/jpeg",.85);
+}
+$("#rvImgs").onchange=async e=>{ CAPTURE=await Promise.all([...e.target.files].slice(0,8).map(f=>toJpeg(f,1100))); $("#rvThumbs").innerHTML=CAPTURE.map((d,i)=>`<img src="${d}" alt="캡처 ${i+1}">`).join("") };
+$("#rvGo").onclick=async()=>{
+  const bizId=$("#rvBiz").value; if(!bizId) return status($("#rvStatus"),"업체를 먼저 등록해 주세요.",true);
+  const src=srcVal(), req={bizId,source:src,keywords:$("#rvKw").value.split(",").map(s=>s.trim()).filter(Boolean).slice(0,3),postType:$("#rvType").value,sponsored:$("input[name=sp]:checked").value,aiImages:$("input[name=ai]:checked").value};
+  if(src==="link"){ req.url=$("#rvUrl").value.trim(); if(!req.url) return status($("#rvStatus"),"글 주소를 넣어 주세요.",true) }
+  if(src==="text"){ req.text=$("#rvText").value; if(!req.text.trim()) return status($("#rvStatus"),"원고를 붙여 넣어 주세요.",true) }
+  if(src==="capture"){ if(!CAPTURE.length) return status($("#rvStatus"),"캡처를 올려 주세요.",true); req.images=CAPTURE.map(d=>d.split(",")[1]) }
+  ls.set("br_lastBiz",bizId); $("#rvGo").disabled=true; $("#result").innerHTML="";
+  status($("#rvStatus"),"글을 읽고, 키워드 근거를 조회하고, 첨삭하는 중입니다. 1분 정도 걸립니다…");
+  try{ const r=await api("review",req); r._capture=src==="capture"?CAPTURE.slice():null; CUR=r; status($("#rvStatus"),r.aiError||""); renderSheet(); $("#result").scrollIntoView({behavior:"smooth",block:"start"}) }
+  catch(e){ status($("#rvStatus"),e.message,true) } finally{ $("#rvGo").disabled=false } };
+
+/* ---------- 첨삭지 그리기 ---------- */
+const TAGCLS={"수정 필요":"must","추가 확인":"check","확인 불가":"check","권장":"suggest"};
+const TAGTXT={"수정 필요":"꼭 고쳐 주세요","추가 확인":"확인해 주세요","확인 불가":"확인 불가","권장":"권해 드려요"};
+function hl(text,quote){ const t=esc(text); if(!quote) return t; const q=esc(quote); const i=t.indexOf(q); if(i<0) return t; return t.slice(0,i)+`<mark class="q">${q}</mark>`+t.slice(i+q.length) }
+function blockHtml(b,quote,full){
+  if(b.type==="image") return b.src?`<img src="${esc(b.src)}" alt="${esc(b.caption||"본문 사진")}" referrerpolicy="no-referrer" crossorigin="anonymous" data-src="${esc(b.src)}" loading="lazy">`+(b.caption?`<small>${esc(b.caption)}</small>`:""):`<span class="ph">[사진${b.alt?": "+esc(b.alt):""}]</span>`;
+  if(b.type==="map") return `<span class="ph">지도: ${esc(b.name||b.text||"")}${b.address?" · "+esc(b.address):""}${b.placeId?" · 장소 번호 "+esc(b.placeId):""}</span>`;
+  if(b.type==="divider") return "";
+  if(b.type==="link") return `<span class="ph">링크: ${esc(b.text||b.url||"")}</span>`;
+  if(b.type==="video") return `<span class="ph">[동영상]</span>`;
+  if(b.type==="sticker") return `<span class="ph">[스티커]</span>`;
+  return hl(b.text||"",quote);
+}
+function blkClass(b){ return "blk "+({title:"title",heading:"heading",quote:"quote",divider:"divider",image:"img"}[b.type]||"")+(["map","link","video","sticker"].includes(b.type)||(b.type==="image"&&!b.src)?" ph":"") }
+function cropCanvas(b){
+  const src=CUR._capture&&CUR._capture[b.img]; if(!src||!b.box) return null;
+  const c=document.createElement("canvas"), img=new Image(); img.src=src;
+  img.onload=()=>{ const [y0,x0,y1,x1]=b.box.map(v=>v/1000), pad=.03, W=img.width, H=img.height;
+    const sx=Math.max(0,(x0-pad))*W, sy=Math.max(0,(y0-pad))*H, ex=Math.min(1,x1+pad)*W, ey=Math.min(1,y1+pad)*H;
+    c.width=ex-sx; c.height=ey-sy; const g=c.getContext("2d"); g.drawImage(img,sx,sy,ex-sx,ey-sy,0,0,c.width,c.height);
+    g.strokeStyle="#d0162f"; g.lineWidth=Math.max(3,W/250); g.strokeRect(x0*W-sx,y0*H-sy,(x1-x0)*W,(y1-y0)*H) };
+  return c;
+}
+function renderSheet(){
+  const r=CUR, F=r.findings||[], S=r.summary||{}, st=r.stats||{};
+  const byBlock={}; F.filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).filter(x=>x>=0).forEach(bi=>(byBlock[bi]=byBlock[bi]||[]).push(f)));
+  const opinion=r.opinionText||OPINION_DEFAULT;
+  const kwRows=(r.keywordTable||[]).map(k=>{ const e=k.evidence||{}, v=e.volume;
+    const vol=v?`PC ${v.pc} · 모바일 ${v.mobile}`:"—";
+    const rk=e.rankScreen>0?`이 글 블로그 검색 ${e.rankScreen}위`:e.rankScreen===0?"이 글 상위 10개 안에 없음":"";
+    return `<tr><td>${esc(k.kw)}<div class="ev">${esc(k.type)}</div></td><td class="${k.where==="없음"?"miss":""}">${esc(k.where)}</td><td>${esc(vol)}${e.at?`<div class="ev">${esc(e.at.slice(5,16))} 조회 · 최근 30일${rk?" · "+esc(rk):""}${e.link?` · <a href="${esc(e.link)}" target="_blank" rel="noopener">검색 결과</a>`:""}</div>`:""}</td></tr>` }).join("");
+  const checks=r.checklist||[]; let g="";
+  const chk=checks.map(c=>{ const head=c.group!==g?`<div class="g">${esc(c.group)}</div>`:""; g=c.group;
+    const cls=/❌|확인 필요/.test(c.state)?"no":/✅/.test(c.state)?"yes":"";
+    return head+`<div class="it ${cls==="no"?"hot":""}"><span class="st ${cls}">${esc(c.state)}</span><span>${esc(c.item)}</span><span class="who">${esc(c.who)}</span></div>` }).join("");
+  const proof=(r.blocks||[]).map((b,i)=>{ const fs=byBlock[i]||[]; const q=fs.map(f=>f.quote).find(Boolean);
+    const marks=fs.length?`<span class="marks">${fs.map(f=>`<a class="mk ${f.status==="수정 필요"?"":"soft"}" href="#card-${f.no}" aria-label="${f.no}번 의견">${f.no}</a>`).join("")}</span>`:"";
+    return `<div class="${blkClass(b)} ${fs.length?"flag":""}">${marks}${blockHtml(b,q)}</div>` }).join("");
+  const cards=F.filter(f=>f.show!==false||EDIT).map(f=>{
+    const bi=(f.blocks||[]).filter(x=>x>=0)[0], b=r.blocks[bi];
+    let ex="";
+    if(b){ ex=`<div class="excerpt" data-bi="${bi}">${b.box&&r._capture?"":`${bi>0&&r.blocks[bi-1].type==="text"&&b.type==="text"?`<p class="ctx">${esc(r.blocks[bi-1].text.slice(-60))}</p>`:""}<div>${blockHtml(b,f.quote)}</div>`}</div>` }
+    const ev=(f.evidence||[]).map(e=>`<li>${esc(e.label)}: <b>${esc(e.value)}</b>${e.link?` · <a href="${esc(e.link)}" target="_blank" rel="noopener">열기</a>`:""}${e.at?` · ${esc(e.at.slice(5,16))}`:""}</li>`).join("");
+    return `<article class="card ${f.show===false?"off":""}" id="card-${f.no}">
+      <div class="ch"><span class="mk ${f.status==="수정 필요"?"":"soft"}">${f.no}</span><h4>${esc(f.title)}</h4><span class="tag ${TAGCLS[f.status]||""}">${esc(TAGTXT[f.status]||f.status)}</span><span class="tag">${esc(f.area)}</span>
+        <label class="only-edit no-export" style="flex-direction:row;gap:6px;margin-left:auto;font-size:.85rem"><input type="checkbox" class="keep" data-no="${f.no}" ${f.show!==false?"checked":""}>보내기에 넣기</label></div>
+      ${ex}
+      <p class="comment" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.comment)}</p>
+      ${f.suggestion||EDIT?`<div class="fix"><span class="lbl">고친 예시</span><span class="sugg" data-no="${f.no}" ${EDIT?"contenteditable=true":""}>${esc(f.suggestion||"")}</span><button class="btn ghost small no-export copy" data-no="${f.no}">복사</button></div>`:""}
+      <ul class="evid"><li>근거 · ${esc(f.source==="AI"?"AI 첨삭":"앱 확인")}</li>${ev}</ul>
+    </article>` }).join("");
+  const goods=(r.good||[]).map(x=>`<li>${esc(x.text)}</li>`).join("");
+  $("#result").innerHTML=`
+  <div class="row no-print" style="margin:6px 0 10px">
+    <button class="btn ghost small" id="edBtn">${EDIT?"고치기 끝내기":"코멘트 고치기"}</button>
+    <button class="btn ghost small" id="saveBtn">고친 내용 저장</button>
+    <button class="btn small" id="pngBtn">카톡용 이미지 저장</button>
+    <button class="btn ghost small" id="pdfBtn">PDF로 저장</button>
+    <span class="status" id="shStatus"></span>
+  </div>
+  <div class="sheet ${EDIT?"editing":""}" id="sheet">
+    <div class="masthead"><h2>${esc(r.bizName)} 블로그 첨삭지</h2><span class="meta">${esc(r.createdAt.slice(0,10))} · ${esc(r.source==="link"?"발행 글":r.source==="text"?"발행 전 원고":"화면 캡처")}</span></div>
+    <p class="opinion" id="opinion" ${EDIT?"contenteditable=true":""}>${esc(opinion)}</p>
+    <div class="verdict"><h3>검수 결과</h3>
+      <p class="head ${S.must?"must":""}">${esc(S.headline||"")}</p>
+      <div class="counts"><span><b>${S.must||0}</b>꼭 고쳐 주실 것</span><span><b>${S.suggest||0}</b>권해 드리는 것</span><span><b>${S.check||0}</b>확인이 필요한 것</span></div>
+      <p class="facts">${esc(r.title)}<br>공백 제외 ${st.chars||0}자 · 사진 ${st.photos||0} · 지도 ${st.maps||0} · 소제목 ${st.headings||0} · 인용구 ${st.quotes||0} · 구분선 ${st.dividers||0} · 표 ${st.tables||0} · 동영상 ${st.videos||0}</p>
+    </div>
+    ${goods?`<div><h3>잘된 점</h3><ul class="good">${goods}</ul></div>`:""}
+    ${kwRows?`<div><h3>핵심 키워드 현황 <small>계속 가지고 가실 키워드</small></h3><table class="plain kwtable"><thead><tr><th>키워드</th><th>이 글에서</th><th>최근 30일 검색량</th></tr></thead><tbody>${kwRows}</tbody></table></div>`:""}
+    <div><h3>발행 전 체크리스트 <small>✅❌는 앱이 확인한 결과, ☐는 직접 확인해 주실 항목</small></h3><div class="check">${chk}</div></div>
+    <div><h3>전체 첨삭지 <small class="viewtag">${esc(r.view||"")}${r.view==="재구성 화면"?" — 실제 네이버 화면과 줄바꿈이 다를 수 있습니다":""}</small></h3><div class="proof">${proof}</div></div>
+    <div><h3>의견</h3><div class="cards">${cards||`<p class="hint">따로 드릴 의견이 없습니다.</p>`}</div></div>
+    <p class="foot">검수일 ${esc(r.createdAt)} · 업체 정보 확인일 ${esc((r.bizSnapshot||{}).placeCheckedAt||"미기록")} · 키워드 근거는 조회 시각 기준 · 이노브웨이</p>
+  </div>`;
+  // 캡처 카드: 해당 부분을 잘라 붙임
+  $$(".excerpt").forEach(el=>{ const b=r.blocks[+el.dataset.bi]; if(b&&b.box&&r._capture){ const c=cropCanvas(b); if(c) el.appendChild(c) } });
+  $("#edBtn").onclick=()=>{ collectEdits(); EDIT=!EDIT; renderSheet() };
+  $("#saveBtn").onclick=saveEdits;
+  $("#pngBtn").onclick=exportPng;
+  $("#pdfBtn").onclick=()=>{ collectEdits(); window.print() };
+  $$(".copy").forEach(b=>b.onclick=async()=>{ const f=F.find(x=>x.no==b.dataset.no); try{ await navigator.clipboard.writeText(f.suggestion||""); b.textContent="복사함" }catch(e){ b.textContent="복사 안 됨" } });
+  $$(".keep").forEach(c=>c.onchange=()=>{ const f=F.find(x=>x.no==c.dataset.no); f.show=c.checked; c.closest(".card").classList.toggle("off",!c.checked) });
+}
+function collectEdits(){ if(!CUR||!EDIT) return; const o=$("#opinion"); if(o) CUR.opinionText=o.innerText.trim()||OPINION_DEFAULT;
+  $$(".comment[data-no]").forEach(p=>{ const f=CUR.findings.find(x=>x.no==p.dataset.no); if(f) f.comment=p.innerText.trim() });
+  $$(".sugg[data-no]").forEach(p=>{ const f=CUR.findings.find(x=>x.no==p.dataset.no); if(f) f.suggestion=p.innerText.trim() }) }
+async function saveEdits(){ collectEdits(); status($("#shStatus"),"저장하는 중…");
+  try{ await api("saveReview",{id:CUR.id,patch:{findings:CUR.findings,opinionText:CUR.opinionText||""}}); status($("#shStatus"),"저장했습니다.") }catch(e){ status($("#shStatus"),e.message,true) } }
+async function exportPng(){
+  collectEdits(); const wasEdit=EDIT; if(EDIT){ EDIT=false; renderSheet() }
+  const sheet=$("#sheet"); status($("#shStatus"),"이미지를 만드는 중…");
+  try{
+    // 네이버 사진은 다른 사이트 그림이라 그대로는 이미지에 안 들어가서 서버에서 받아 바꿉니다.
+    const imgs=$$("#sheet img[data-src]"), urls=[...new Set(imgs.map(i=>i.dataset.src))];
+    if(urls.length){ try{ const map=await api("imageData",{urls}); imgs.forEach(i=>{ if(map[i.dataset.src]){ i.removeAttribute("crossorigin"); i.src=map[i.dataset.src] } }) }catch(e){} }
+    imgs.forEach(i=>{ i.loading="eager" });
+    await Promise.race([Promise.all(imgs.map(i=>i.complete?0:new Promise(ok=>{i.onload=i.onerror=ok}))),new Promise(ok=>setTimeout(ok,8000))]);
+    sheet.classList.add("exporting"); sheet.style.width="540px";
+    const canvas=await html2canvas(sheet,{scale:2,useCORS:true,backgroundColor:getComputedStyle(sheet).backgroundColor,width:540,windowWidth:900});
+    sheet.classList.remove("exporting"); sheet.style.width="";
+    const a=document.createElement("a"); a.href=canvas.toDataURL("image/png"); a.download=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}.png`; a.click();
+    status($("#shStatus"),"이미지를 저장했습니다.");
+  }catch(e){ sheet.classList.remove("exporting"); sheet.style.width=""; status($("#shStatus"),"이미지를 만들지 못했습니다. PDF로 저장해 주세요.",true) }
+  if(wasEdit){ EDIT=true; renderSheet() }
+}
+
+/* ---------- 기록 ---------- */
+async function loadHistory(){ $("#hsList").innerHTML=`<p class="hint">불러오는 중…</p>`;
+  try{ const L=await api("listReviews",{bizId:$("#hsBiz").value});
+    $("#hsList").innerHTML=L.length?L.map(x=>`<button data-id="${esc(x.id)}"><span>${esc(x.title)}<br><small>${esc((BIZ.find(b=>b.id===x.bizId)||{}).name||"")} · ${esc(x.summary&&x.summary.headline||"")}</small></span><small>${esc(x.createdAt.slice(0,16))}</small></button>`).join(""):`<p class="hint">아직 검수 기록이 없습니다. 검수 탭에서 첫 글을 검수해 주세요.</p>`;
+    $$("#hsList button").forEach(b=>b.onclick=async()=>{ CUR=await api("getReview",{id:b.dataset.id}); EDIT=false; show("review"); renderSheet(); $("#result").scrollIntoView({behavior:"smooth"}) });
+  }catch(e){ $("#hsList").innerHTML=`<p class="status err">${esc(e.message)}</p>` } }
+$("#hsBiz").onchange=loadHistory;
+
+if(AUTH.adminPw) login(AUTH.adminPw);
+</script>

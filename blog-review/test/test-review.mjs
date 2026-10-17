@@ -41,6 +41,7 @@ check('키워드 근거: 키 없는 API는 건너뜀 표시', R.evidence.every(e
 check('체크리스트: 지도 항목 ❌', R.checklist.find(c => c.item.startsWith('장소(지도)')).state === '❌');
 check('학원 업종 체크 항목 추가', R.checklist.some(c => c.group === '업종'));
 check('요약: 꼭 고쳐 주실 것', R.summary.must >= 1 && /꼭 고쳐/.test(R.summary.headline));
+check('편집 표시 [인용구]·[표] 남음 → 수정 필요', R.findings.some(f => f.title === '편집 표시가 글자로 남음' && /인용구/.test(f.comment)), R.findings.map(f => f.title));
 check('저장됨', call('getReview', { id: R.id }).data.title === R.title);
 check('keyword_log 탭에 하루 1회 저장', s.__sheets.keyword_log.rows.length - 1 === R.evidence.length);
 

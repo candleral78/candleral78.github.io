@@ -64,7 +64,7 @@ export function makeServer(opts = {}) {
     LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) },
     Utilities: {
       formatDate: (d, tz, f) => { const p = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(d); return p.replace('T', ' '); },
-      base64Encode: b => Buffer.from(b).toString('base64'),
+      base64Encode: b => Buffer.from(b.map ? b.map(x => (x < 0 ? x + 256 : x)) : b).toString('base64'),
       computeHmacSha256Signature: (v, k) => [...crypto.createHmac('sha256', k).update(v).digest()]
     },
     UrlFetchApp: {
@@ -73,6 +73,10 @@ export function makeServer(opts = {}) {
           const body = JSON.parse(o.payload); const parts = body.contents[0].parts; const prompt = parts[parts.length - 1].text;
           const r = fakeGemini(prompt, parts.length - 1);
           return { getResponseCode: () => r.code, getContentText: () => r.code === 200 ? JSON.stringify({ candidates: [{ content: { parts: [{ text: r.text }] }, finishReason: 'STOP' }] }) : r.text, getAllHeaders: () => ({}) };
+        }
+        if (/pstatic\.net\//.test(url)) {
+          let buf; try { buf = execFileSync('curl', ['-sSL', '-m', '20', '-H', 'Referer: https://m.blog.naver.com/', url], { maxBuffer: 32 * 1024 * 1024 }); } catch (e) { buf = Buffer.alloc(0); }
+          return { getResponseCode: () => (buf.length ? 200 : 404), getContentText: () => '', getAllHeaders: () => ({}), getBlob: () => ({ getContentType: () => 'image/jpeg', getBytes: () => [...buf].map(b => (b > 127 ? b - 256 : b)) }) };
         }
         const r = curl(url, o && o.headers);
         return { getResponseCode: () => r.code, getContentText: () => r.body, getAllHeaders: () => ({}) };

@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "html2canvas": "^1.4.1",
+    "playwright": "^1.64.0"
+  }
+}

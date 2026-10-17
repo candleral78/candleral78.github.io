@@ -86,6 +86,7 @@ function route_(req) {
       delete r.id; setRow_('reviews', req.id, r); return true;
     }
     case 'delReview': delRow_('reviews', req.id); return true;
+    case 'imageData': return imageData_(req.urls || []);
     case 'probe': return runProbe_(req.target || PROBE_TARGET, false);
     default: throw fail_('bad_request', '알 수 없는 요청입니다: ' + req.action);
   }
@@ -98,6 +99,19 @@ function get_(url, headers, noFollow) {
   var r = UrlFetchApp.fetch(url, { method: 'get', headers: h, muteHttpExceptions: true, followRedirects: !noFollow });
   var hd = {}; try { hd = r.getAllHeaders ? r.getAllHeaders() : {}; } catch (e) { }
   return { code: r.getResponseCode(), text: r.getContentText('UTF-8'), headers: hd };
+}
+
+/** 첨삭지를 이미지로 저장할 때 쓸 블로그 사진을 data URL로 바꿉니다(네이버 사진 주소만). */
+function imageData_(urls) {
+  var out = {};
+  urls.slice(0, 12).forEach(function (u) {
+    if (!/^https:\/\/[a-z0-9.-]*pstatic\.net\//.test(u)) return;
+    try {
+      var r = UrlFetchApp.fetch(u.replace(/\?type=\w+$/, '') + '?type=w773', { muteHttpExceptions: true, headers: { Referer: 'https://m.blog.naver.com/' } });
+      if (r.getResponseCode() === 200) { var b = r.getBlob(); out[u] = 'data:' + (b.getContentType() || 'image/jpeg') + ';base64,' + Utilities.base64Encode(b.getBytes()); }
+    } catch (e) { }
+  });
+  return out;
 }
 
 /* ---------- 주소 해석 ---------- */
@@ -529,7 +543,25 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     suggestion: title.replace(/\s{2,}/g, ' '), evidence: [ev('측정', '연속 빈칸 ' + (/\s{3,}/.exec(title)[0].length) + '칸')]
   });
 
-  // 14. 사진 재사용
+  // 14. 글쓰기 표시가 글자로 남음 ([인용구], [표], [사진 1: ...], [확인 필요: ...] 등)
+  var leftovers = [];
+  B.forEach(function (b, bi) {
+    if (b.type !== 'text' && b.type !== 'heading' && b.type !== 'quote') return;
+    var m = /\[(인용구?|표|사진[^\]]*|구분선|말풍선[^\]]*|강조[^\]]*|체크리스트[^\]]*|장소 버튼[^\]]*|지도|확인 필요[^\]]*)\]/.exec(b.text || '');
+    if (m && !(planned && /^\[(사진|지도|구분선|인용)/.test(m[0]) && m[0] === b.text)) leftovers.push({ bi: bi, t: m[0] });
+  });
+  if (leftovers.length && !planned) add({
+    area: '품질', status: '수정 필요', title: '편집 표시가 글자로 남음', blocks: leftovers.slice(0, 3).map(function (x) { return x.bi; }), quote: leftovers[0].t,
+    comment: '본문에 "' + leftovers.map(function (x) { return x.t; }).slice(0, 3).join('", "') + '"' + (leftovers.length > 3 ? ' 등 ' + leftovers.length + '곳' : '') + '이 글자로 그대로 보입니다. 원고를 옮길 때 남은 편집 표시라 읽는 분께는 어색하게 보입니다. 해당 글자를 지우고, 표시한 자리에 실제 인용구나 표를 넣어 주세요.',
+    evidence: [ev('측정', '편집 표시 ' + leftovers.length + '곳')]
+  });
+  if (planned && leftovers.some(function (x) { return /확인 필요/.test(x.t); })) add({
+    area: '품질', status: '추가 확인', title: '확인이 필요한 칸', blocks: leftovers.filter(function (x) { return /확인 필요/.test(x.t); }).map(function (x) { return x.bi; }).slice(0, 3),
+    quote: leftovers.filter(function (x) { return /확인 필요/.test(x.t); })[0].t,
+    comment: '원고에 [확인 필요] 칸이 남아 있습니다. 발행 전에 실제 내용으로 채워 주세요.', evidence: [ev('측정', '[확인 필요] 표시')]
+  });
+
+  // 15. 사진 재사용
   var imageKeys = photos.map(function (p) { return String(p.src || '').replace(/\?.*$/, '').replace(/^https?:\/\/[^/]+/, ''); }).filter(String);
   if (prevImageKeys && imageKeys.length) {
     var dup = imageKeys.filter(function (k) { return prevImageKeys[k]; });
@@ -566,7 +598,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
     { group: '표시와 주의 표현', item: '다른 사람의 사진·글·글꼴을 허락 없이 쓰지 않았습니다', who: '대표', state: '☐' },
     { group: '발행 설정', item: '카테고리를 맞게 골랐습니다', who: '대표', state: '☐' },
     { group: '발행 설정', item: '태그에 상호와 핵심 키워드를 넣었습니다', who: '대표', state: '☐' },
-    { group: '발행 설정', item: "공개 설정이 '전체공개'입니다", who: '대표', state: linkSrc ? '✅ (링크로 읽힘)' : '☐' },
+    { group: '발행 설정', item: "공개 설정이 '전체공개'입니다", who: '대표', state: linkSrc ? '✅' : '☐' },
     { group: '발행 설정', item: '검색 허용과 외부 보내기 허용이 켜져 있습니다', who: '대표', state: '☐' },
     { group: '발행 설정', item: '네이버 맞춤법 검사를 했습니다', who: '대표', state: '☐' },
     { group: '발행 설정', item: '모바일 미리보기로 사진과 글이 잘 보이는지 확인했습니다', who: '대표', state: '☐' }
