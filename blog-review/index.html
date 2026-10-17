@@ -222,6 +222,7 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
       <button role="tab" data-tab="review" aria-selected="true">검수</button>
       <button role="tab" data-tab="biz" aria-selected="false">업체</button>
       <button role="tab" data-tab="history" aria-selected="false">기록</button>
+      <button id="logout" title="이 컴퓨터에 기억한 암호를 지웁니다">나가기</button>
     </nav>
   </header>
 
@@ -229,6 +230,7 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
   <section class="panel" id="login">
     <h2>암호를 넣어 주세요</h2>
     <label>암호<input type="password" id="pw" autocomplete="current-password"></label>
+    <label style="flex-direction:row;align-items:center;gap:8px;font-size:.92rem"><input type="checkbox" id="remember" checked>이 컴퓨터에서 기억하기 <small>(다른 사람과 같이 쓰는 컴퓨터라면 꺼 주세요)</small></label>
     <div class="row"><button class="btn" id="loginBtn">들어가기</button><span class="status" id="loginStatus"></span></div>
   </section>
 
@@ -318,7 +320,8 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const nsp=s=>String(s||"").replace(/\s+/g,"");
-const AUTH={adminPw:sessionStorage.getItem("br_pw")||""};
+let SAVED=""; try{ SAVED=localStorage.getItem("br_pw")||sessionStorage.getItem("br_pw")||"" }catch(e){}
+const AUTH={adminPw:SAVED};
 const OPINION_DEFAULT="이 첨삭지는 정답을 정해 드리는 것이 아니라, 검수 기준과 조회 자료를 바탕으로 드리는 컨설턴트의 의견입니다. 대표님 업체의 사정이나 의도와 다른 부분이 있다면 그대로 두셔도 괜찮고, 말씀해 주시면 다음 검수에 반영하겠습니다. 검색 결과와 검색량은 조회한 시점의 자료이며, 이 의견을 따르더라도 검색 노출이 보장되지는 않습니다.";
 let BIZ=[], CUR=null, CAPTURE=[], EDIT=false;
 
@@ -334,14 +337,15 @@ function status(el,msg,err){ el.textContent=msg||""; el.classList.toggle("err",!
 async function login(pw){
   AUTH.adminPw=pw; status($("#loginStatus"),"확인하는 중…");
   try{ const p=await api("ping"); if(!p.admin) throw {message:"암호가 맞지 않습니다."};
-    sessionStorage.setItem("br_pw",pw); $("#login").hidden=true; $("#tabs").hidden=false; show("review"); await loadBiz();
+    try{ if($("#remember").checked) localStorage.setItem("br_pw",pw); else { localStorage.removeItem("br_pw"); sessionStorage.setItem("br_pw",pw) } }catch(e){} $("#login").hidden=true; $("#tabs").hidden=false; show("review"); await loadBiz();
     if(!p.gemini) status($("#rvStatus"),"AI 키가 없어 기계 검사만 합니다.");
-  }catch(e){ status($("#loginStatus"),e.message,true); AUTH.adminPw="" }
+  }catch(e){ status($("#loginStatus"),e.message,true); AUTH.adminPw=""; try{ localStorage.removeItem("br_pw") }catch(x){} $("#login").hidden=false }
 }
 $("#loginBtn").onclick=()=>login($("#pw").value.trim());
 $("#pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login($("#pw").value.trim()) });
-function show(t){ $$("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); ["review","biz","history"].forEach(x=>$("#tab-"+x).hidden=x!==t); if(t==="history") loadHistory() }
-$$("#tabs button").forEach(b=>b.onclick=()=>show(b.dataset.tab));
+function show(t){ $$("#tabs button[data-tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); ["review","biz","history"].forEach(x=>$("#tab-"+x).hidden=x!==t); if(t==="history") loadHistory() }
+$$("#tabs button[data-tab]").forEach(b=>b.onclick=()=>show(b.dataset.tab));
+$("#logout").onclick=()=>{ try{ localStorage.removeItem("br_pw"); sessionStorage.removeItem("br_pw") }catch(e){} location.reload() };
 
 /* ---------- 업체 ---------- */
 const RULES=[["minChars","본문 분량(공백 제외 글자)",1500],["minPhotos","사진 수",5],["requireMap","지도(장소) 첨부",""],["maxRepeat","같은 키워드 반복 한도",10]];
@@ -447,22 +451,27 @@ function naverView(r){
   root.innerHTML=`${(r.viewCss||[]).map(u=>`<link rel="stylesheet" href="${esc(u)}">`).join("")}
   <style>:host{display:block;background:#fff;color:#111}.wrap{position:relative;padding:8px 14px 30px 38px;background:#fff}img{max-width:100%!important;height:auto!important}
   a{pointer-events:none;color:inherit}
-  .br-mark{position:relative!important;outline:2.5px solid #d0162f;outline-offset:3px;border-radius:2px}
-  .br-mark.br-soft{outline-style:dashed}
-  .br-no{position:absolute;left:-34px;top:-2px;z-index:50;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif;text-align:center;pointer-events:auto;cursor:pointer;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .br-mark{box-shadow:inset 0 0 0 2.5px #d0162f!important;background-color:rgba(208,22,47,.07)!important;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .br-mark.br-soft{box-shadow:inset 0 0 0 2px rgba(208,22,47,.75)!important;background-color:rgba(208,22,47,.04)!important}
+  .br-mark img{opacity:.92}
+  .br-no{display:inline-block;vertical-align:middle;margin:0 6px 2px 2px;width:24px;height:24px;border-radius:50%;background:#d0162f;color:#fff;font:700 13px/24px sans-serif!important;text-align:center;text-indent:0;pointer-events:auto;cursor:pointer;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .br-tag{display:block;font:700 12px/1.4 sans-serif;color:#d0162f;padding:4px 6px 0}
   .br-no.soft{background:#fff;color:#d0162f;border:2px solid #d0162f;line-height:20px}</style>
   <div class="wrap"><div class="se-viewer se-theme-default">${r.viewHtml}</div></div>`;
   const wrap=root.querySelector(".wrap"), comps=[...root.querySelectorAll(".se-component")];
   function target(b){ const c=comps[b.ci]; if(!c) return null; if(b.type==="text"&&typeof b.pi==="number"){ const ps=[...c.querySelectorAll("p.se-text-paragraph")].filter(p=>p.textContent.replace(/\u200b/g,"").trim()); return ps[b.pi]||c } return c }
   function draw(){
-    root.querySelectorAll(".br-no").forEach(x=>x.remove()); root.querySelectorAll("[data-br]").forEach(x=>{ x.removeAttribute("data-br"); x.classList.remove("br-mark","br-soft") });
+    root.querySelectorAll(".br-no,.br-tag").forEach(x=>x.remove()); root.querySelectorAll("[data-br]").forEach(x=>{ x.removeAttribute("data-br"); x.classList.remove("br-mark","br-soft") });
     (r.findings||[]).filter(f=>f.show!==false).forEach(f=>(f.blocks||[]).filter(x=>x>=0).slice(0,3).forEach(bi=>{ const b=r.blocks[bi]; if(!b) return; const el=target(b); if(!el) return;
       // 표시를 글 요소 자체에 붙여서 화면 폭이나 PDF로 바뀌어도 위치가 어긋나지 않게 합니다.
       el.classList.add("br-mark"); if(f.status!=="수정 필요"&&!el.dataset.br) el.classList.add("br-soft"); if(f.status==="수정 필요") el.classList.remove("br-soft");
-      const k=(el.dataset.br?el.dataset.br.split(",").length:0); el.dataset.br=(el.dataset.br?el.dataset.br+",":"")+f.no;
-      const n=document.createElement("span"); n.className="br-no"+(f.status==="수정 필요"?"":" soft"); n.textContent=f.no; n.style.top=(k*28-2)+"px"; n.title=f.title;
+      el.dataset.br=(el.dataset.br?el.dataset.br+",":"")+f.no;
+      const n=document.createElement("span"); n.className="br-no"+(f.status==="수정 필요"?"":" soft"); n.textContent=f.no; n.title=f.title;
       n.onclick=()=>{ const cd=document.getElementById("card-"+f.no); if(cd) cd.scrollIntoView({behavior:"smooth",block:"start"}) };
-      el.appendChild(n) })) }
+      // 번호는 문장 안쪽 맨 앞에 넣습니다(네이버 화면이 바깥을 잘라도 보이게). 사진·지도처럼 글이 없는 칸은 위에 한 줄로 붙입니다.
+      if(el.tagName==="P"){ el.insertBefore(n,el.firstChild) }
+      else { let t=el.querySelector(":scope > .br-tag"); if(!t){ t=document.createElement("div"); t.className="br-tag"; el.insertBefore(t,el.firstChild) } t.appendChild(n); if(!t.dataset.t){ t.dataset.t=1; t.appendChild(document.createTextNode(f.title)) } }
+    })) }
   host._draw=draw;
   host._goto=no=>{ const bx=[...root.querySelectorAll("[data-br]")].find(e=>e.dataset.br.split(",").includes(String(no))), sc=host.parentElement; if(bx&&sc){ const t=bx.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop-80; sc.scrollTo({top:Math.max(0,t),behavior:"smooth"}) } };
   setTimeout(draw,0);
