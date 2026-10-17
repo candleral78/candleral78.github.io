@@ -805,6 +805,30 @@ function gemini_(prompt, images, wantJson, tier) {
   throw fail_('upstream_error', 'AI 응답을 받지 못했습니다. (' + last + ')');
 }
 
+/**
+ * 편집기에서 실행: 시험 업체(반포필즈수학)를 등록(이미 있으면 갱신)하고 글 한 편을 검수해 reviews 탭에 남깁니다.
+ * 화면에 들어가면 [기록] 탭에서 첨삭지를 열 수 있습니다.
+ */
+function runSample() {
+  var name = PROBE_TARGET.bizName, id = '';
+  listRows_('biz').forEach(function (b) { if (b.name === name) id = b.id; });
+  id = id || ('b' + new Date().getTime());
+  var old = getRow_('biz', id) || {};
+  var biz = {
+    name: name, industry: '학원·교육', placeId: PROBE_TARGET.placeId, placeUrl: 'https://map.naver.com/p/entry/place/' + PROBE_TARGET.placeId,
+    blogId: PROBE_TARGET.blogId, blogUrl: 'https://blog.naver.com/' + PROBE_TARGET.blogId,
+    address: old.address || '서울 서초구 신반포로 165 반포쇼핑타운 2동 3층', phone: old.phone || '02-595-2252', placeCheckedAt: old.placeCheckedAt || '2026-10-17',
+    coreKeywords: old.coreKeywords || [{ kw: '반포필즈수학', type: '상호' }, { kw: '반포 수학학원', type: '지역+업종' }, { kw: '잠원동 수학학원', type: '지역+업종' }],
+    rules: old.rules || { minChars: { value: 1500, level: '권장' }, minPhotos: { value: 5, level: '권장' }, requireMap: { value: '', level: '권장' }, maxRepeat: { value: 10, level: '권장' } },
+    guideNote: old.guideNote || '원장 1인 운영 수학학원. 초·중·고 수업.', updatedAt: nowKst_()
+  };
+  setRow_('biz', id, biz);
+  var r = runReview_({ bizId: id, source: 'link', url: 'https://blog.naver.com/' + PROBE_TARGET.blogId + '/' + PROBE_TARGET.postNos[0], postType: '정보성', sponsored: 'no', aiImages: 'yes', keywords: ['반포 초등수학'] });
+  var msg = [r.title, r.summary.headline + ' / 권장 ' + r.summary.suggest + ' / 확인 ' + r.summary.check, r.aiError || 'AI 첨삭 완료']
+    .concat(r.findings.map(function (f) { return f.no + '. [' + f.status + '] ' + f.title; }));
+  Logger.log(msg.join('\n')); return msg.join('\n');
+}
+
 /* ---------- 0단계 수집 시험 ---------- */
 function runProbe() {
   var res = runProbe_(PROBE_TARGET, true);
