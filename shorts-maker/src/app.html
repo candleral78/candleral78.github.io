@@ -1,0 +1,517 @@
+<title>사진으로 숏폼 만들기 | 이노브웨이</title>
+<style>
+/*FONTFACE*/
+:root{--ink:#1d1d1f;--sub:#6b6b70;--line:#e3e3e6;--bg:#f6f5f2;--card:#fff;--brand:#C0112F}
+*{box-sizing:border-box}
+body{font-family:"Gmarket Sans",sans-serif;font-weight:500;color:var(--ink);background:var(--bg);line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+h1{font-weight:700;font-size:26px;margin:0 0 4px}
+.lead{color:var(--sub);margin:0 0 20px;font-size:15px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.box h2{font-size:17px;font-weight:700;margin:0 0 4px}
+.box .hint{color:var(--sub);font-size:13px;margin:0 0 12px}
+.step{display:inline-block;background:var(--ink);color:#fff;border-radius:99px;font-size:12px;padding:2px 9px;margin-right:6px;vertical-align:2px}
+label.f{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+input[type=text],textarea{width:100%;font:inherit;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+textarea{resize:vertical;min-height:44px}
+.drop{border:2px dashed #c9c9cf;border-radius:12px;padding:26px 12px;text-align:center;color:var(--sub);cursor:pointer;background:#fafafa}
+.drop.on{border-color:var(--ink);background:#f0f0f0}
+.drop b{color:var(--ink)}
+.scene{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.scene:first-child{border-top:0}
+.thumb{position:relative;width:120px;height:120px;border-radius:10px;overflow:hidden;cursor:crosshair;background:#ddd}
+.thumb img{width:100%;height:100%;object-fit:contain;background:#222;display:block}
+.thumb .dot{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.5);pointer-events:none}
+.thumb .no{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;border-radius:6px;padding:1px 7px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+button{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:#9a9aa0}
+button:disabled{opacity:.45;cursor:default}
+button.main{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700;font-size:16px;padding:12px 16px;width:100%}
+button.small{font-size:12px;padding:4px 9px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;font-size:12px;padding:4px 9px}
+.seg button.on{background:var(--ink);color:#fff}
+.side{position:sticky;top:12px}
+.stage{background:#111;border-radius:14px;padding:10px;text-align:center}
+.stage canvas{width:100%;max-width:300px;aspect-ratio:9/16;border-radius:8px;display:block;margin:0 auto;background:#000}
+.bar{height:6px;background:#e3e3e6;border-radius:99px;overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;width:0;background:var(--ink);transition:width .1s}
+.msg{font-size:13px;color:var(--sub);min-height:20px}
+.msg.err{color:#b3261e}
+.opts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--sub)}
+.opts input[type=color]{width:38px;height:30px;border:1px solid var(--line);border-radius:7px;padding:2px;background:#fff}
+.tip{font-size:13px;color:var(--sub);background:#fafafa;border-radius:10px;padding:10px 12px;margin-top:10px}
+.tip b{color:var(--ink)}
+.empty{color:var(--sub);font-size:14px;padding:6px 0}
+</style>
+
+<div class="wrap">
+  <h1>사진으로 숏폼 만들기</h1>
+  <p class="lead">사진을 넣고 글을 적으면 세로 영상(릴스·클립·쇼츠)과 카드뉴스가 만들어집니다. 사진은 이 컴퓨터 밖으로 나가지 않습니다.</p>
+
+  <div class="grid">
+    <div>
+      <div class="box">
+        <h2><span class="step">1</span>영상 기획 (세 칸)</h2>
+        <p class="hint">처음 2초에 멈추게 하고, 끝에서 할 일을 알려 주면 됩니다.</p>
+        <label class="f">첫 화면 큰 제목 — 넘기던 손을 멈추게 할 한마디</label>
+        <input type="text" id="title" placeholder="예) 6월의 홋카이도, 이 풍경 실화입니다">
+        <label class="f">제목 위 작은 글씨 (날짜·장소 등, 없어도 됨)</label>
+        <input type="text" id="tag" placeholder="예) 2026.6.7 ~ 6.10 · 3박 4일">
+        <label class="f">마지막 화면 — 보는 사람이 할 일</label>
+        <textarea id="endMain" rows="2" placeholder="예) 다음 여행, 함께 떠나요"></textarea>
+        <label class="f">마지막 화면 작은 글씨 (업체명·연락처·계정 등)</label>
+        <textarea id="endSub" rows="2" placeholder="예) ○○여행사 · 문의는 프로필 링크"></textarea>
+      </div>
+
+      <div class="box">
+        <h2><span class="step">2</span>사진 넣기</h2>
+        <p class="hint">여러 장을 한꺼번에 넣어도 됩니다. 사진을 누르면 그 지점이 화면 가운데가 됩니다(사람 얼굴이 잘리지 않게).</p>
+        <div class="drop" id="drop"><b>여기를 눌러 사진 고르기</b><br>또는 사진을 끌어다 놓기</div>
+        <input type="file" id="file" accept="image/*" multiple hidden>
+      </div>
+
+      <div class="box">
+        <h2><span class="step">3</span>순서와 장면 글</h2>
+        <p class="hint">▲▼로 순서를 바꿉니다. 장면 글은 짧을수록 좋습니다(한 줄 15자 안팎).</p>
+        <div id="list"><div class="empty">아직 사진이 없습니다.</div></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="box">
+        <h2><span class="step">4</span>미리 보기와 만들기</h2>
+        <div class="stage"><canvas id="cv" width="1080" height="1920"></canvas></div>
+        <div class="row" style="justify-content:center;margin-top:10px">
+          <button id="play">▶ 미리 보기</button>
+        </div>
+        <div class="opts" style="margin-top:12px">
+          <span>장면 길이</span>
+          <span class="seg" id="durSeg"><button data-v="2.5">2.5초</button><button data-v="3" class="on">3초</button><button data-v="4">4초</button></span>
+        </div>
+        <div class="opts" style="margin-top:8px">
+          <span>강조 색</span><input type="color" id="color" value="#0E5E6F">
+          <span id="lenInfo"></span>
+        </div>
+        <div class="bar"><i id="prog"></i></div>
+        <div class="msg" id="msg"></div>
+        <button class="main" id="mkVideo" style="margin-top:6px">세로 영상 만들기 (mp4)</button>
+        <button id="mkCards" style="width:100%;margin-top:8px">카드뉴스 만들기 (4:5 사진 묶음)</button>
+        <div class="tip"><b>올리기 전에</b><br>· 음악은 각 앱에서 무료 음악을 붙이세요.<br>· 손님 얼굴이 나오면 게시 동의를 확인하세요.<br>· 같은 영상을 릴스·클립·쇼츠에 모두 올려도 됩니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*MP4MUXER*/
+</script>
+<script>
+(() => {
+const W = 1080, H = 1920, FPS = 30, FADE = 0.6, END_DUR = 3;
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const S = { scenes: [], dur: 3, color: '#0E5E6F', playing: false };
+let nextId = 1;
+
+// ---------- 사진 넣기 ----------
+const drop = $('drop'), file = $('file');
+drop.onclick = () => file.click();
+file.onchange = () => { addFiles(file.files); file.value = ''; };
+['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('on'); }));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('on'); }));
+drop.addEventListener('drop', ev => addFiles(ev.dataTransfer.files));
+
+async function addFiles(files) {
+  const list = [...files].filter(f => f.type.startsWith('image/'));
+  for (const f of list) {
+    try {
+      const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+      const img = shrink(bmp, 2400);
+      S.scenes.push({ id: nextId++, img, url: URL.createObjectURL(f), cx: .5, cy: .5,
+        mode: img.width > img.height ? 'whole' : 'fill', cap: '', sub: '', bg: null });
+    } catch (e) { say('사진을 읽지 못했습니다: ' + f.name, true); }
+  }
+  render(); drawStill();
+}
+window.SM_addFiles = addFiles; // 시험용
+
+function shrink(bmp, max) {
+  const r = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  if (r === 1) return bmp;
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * r); c.height = Math.round(bmp.height * r);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return c;
+}
+
+// ---------- 장면 목록 ----------
+function render() {
+  const L = $('list');
+  if (!S.scenes.length) { L.innerHTML = '<div class="empty">아직 사진이 없습니다.</div>'; info(); return; }
+  L.innerHTML = '';
+  S.scenes.forEach((s, i) => {
+    const d = document.createElement('div'); d.className = 'scene';
+    d.innerHTML = `
+      <div class="thumb"><img src="${s.url}" alt=""><span class="no">${i + 1}</span><span class="dot"></span></div>
+      <div>
+        <input type="text" class="cap" placeholder="${i === 0 ? '첫 장면 글 (제목과 함께 나옵니다, 비워도 됨)' : '장면 글 예) 에메랄드빛 청의 호수'}">
+        <input type="text" class="sub" style="margin-top:6px;font-size:13px" placeholder="작은 글씨 (없어도 됨)">
+        <div class="row">
+          <button class="small up" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="small dn" ${i === S.scenes.length - 1 ? 'disabled' : ''}>▼</button>
+          <span class="seg"><button data-m="fill">화면 꽉 채우기</button><button data-m="whole">사진 전체 보이기</button></span>
+          <button class="small del">빼기</button>
+        </div>
+      </div>`;
+    const img = d.querySelector('img'), dot = d.querySelector('.dot');
+    const placeDot = () => {
+      // object-fit:contain 안에서 점 위치 계산
+      const bw = 120, r = Math.min(bw / s.img.width, bw / s.img.height);
+      const w = s.img.width * r, h = s.img.height * r;
+      dot.style.left = ((bw - w) / 2 + s.cx * w) + 'px'; dot.style.top = ((bw - h) / 2 + s.cy * h) + 'px';
+    };
+    placeDot();
+    d.querySelector('.thumb').onclick = ev => {
+      const rc = img.getBoundingClientRect(), r = Math.min(rc.width / s.img.width, rc.height / s.img.height);
+      const w = s.img.width * r, h = s.img.height * r;
+      s.cx = clamp((ev.clientX - rc.left - (rc.width - w) / 2) / w, 0, 1);
+      s.cy = clamp((ev.clientY - rc.top - (rc.height - h) / 2) / h, 0, 1);
+      placeDot(); drawStill(i);
+    };
+    const cap = d.querySelector('.cap'), sub = d.querySelector('.sub');
+    cap.value = s.cap; sub.value = s.sub;
+    cap.oninput = () => { s.cap = cap.value; drawStill(i); };
+    sub.oninput = () => { s.sub = sub.value; drawStill(i); };
+    d.querySelector('.up').onclick = () => { move(i, -1); };
+    d.querySelector('.dn').onclick = () => { move(i, 1); };
+    d.querySelector('.del').onclick = () => { S.scenes.splice(i, 1); render(); drawStill(); };
+    d.querySelectorAll('[data-m]').forEach(b => {
+      b.classList.toggle('on', b.dataset.m === s.mode);
+      b.onclick = () => { s.mode = b.dataset.m; render(); drawStill(i); };
+    });
+    L.appendChild(d);
+  });
+  info();
+}
+function move(i, dir) { const a = S.scenes; [a[i], a[i + dir]] = [a[i + dir], a[i]]; render(); drawStill(i + dir); }
+function info() { const t = total(); $('lenInfo').textContent = S.scenes.length ? `영상 길이 약 ${Math.round(t)}초` : ''; }
+
+$('durSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+  S.dur = +b.dataset.v; $('durSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); info();
+});
+$('color').oninput = e => { S.color = e.target.value; drawStill(); };
+['title', 'tag', 'endMain', 'endSub'].forEach(id => $(id).addEventListener('input', () => drawStill(/^end/.test(id) ? -1 : 0)));
+
+// ---------- 그리기 ----------
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+function total() { return S.scenes.length ? S.scenes.length * S.dur + END_DUR : 0; }
+
+function blurBg(s, w, h) {
+  const key = w + 'x' + h;
+  if (s.bg && s.bg.key === key) return s.bg.c;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  const sc = Math.max(w / s.img.width, h / s.img.height) * 1.15;
+  g.filter = 'blur(48px) brightness(.7)';
+  g.drawImage(s.img, (w - s.img.width * sc) / 2, (h - s.img.height * sc) / 2, s.img.width * sc, s.img.height * sc);
+  s.bg = { key, c };
+  return c;
+}
+
+// p: 0~1 장면 진행도, k: 장면 번호(움직임 방향을 번갈아)
+function drawPhoto(g, s, w, h, p, k, still) {
+  const iw = s.img.width, ih = s.img.height;
+  const zIn = k % 2 === 0;
+  const z = still ? 1.03 : (zIn ? 1 + .1 * ease(p) : 1.1 - .1 * ease(p));
+  const drift = still ? 0 : (k % 4 < 2 ? 1 : -1) * (ease(p) - .5) * .06;
+  if (s.mode === 'whole') {
+    g.drawImage(blurBg(s, w, h), 0, 0);
+    const sc = Math.min(w / iw, h * .62 / ih) * (z - .03);
+    const dw = iw * sc, dh = ih * sc;
+    const x = (w - dw) / 2 + drift * w * .3, y = h * .42 - dh / 2;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 40; g.drawImage(s.img, x, y, dw, dh); g.restore();
+    return;
+  }
+  const sc = Math.max(w / iw, h / ih) * z;
+  const dw = iw * sc, dh = ih * sc;
+  let x = w / 2 - (s.cx + drift) * dw, y = h / 2 - s.cy * dh;
+  x = clamp(x, w - dw, 0); y = clamp(y, h - dh, 0);
+  g.drawImage(s.img, x, y, dw, dh);
+}
+
+function wrap(g, text, maxW) {
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    let line = '';
+    for (const word of para.split(' ')) {
+      const t = line ? line + ' ' + word : word;
+      if (g.measureText(t).width <= maxW) { line = t; continue; }
+      if (line) out.push(line);
+      line = '';
+      // 한 단어가 너무 길면 글자 단위로 자른다
+      let piece = '';
+      for (const ch of word) { if (g.measureText(piece + ch).width > maxW) { out.push(piece); piece = ch; } else piece += ch; }
+      line = piece;
+    }
+    out.push(line);
+  }
+  return out.filter((l, i, a) => l || (i > 0 && i < a.length - 1));
+}
+
+// 줄 수는 그대로 두고 줄 길이를 고르게 (마지막 줄에 한 단어만 남지 않게)
+function wrapBal(g, text, maxW) {
+  const base = wrap(g, text, maxW);
+  if (base.length < 2) return base;
+  let lo = maxW * .4, hi = maxW;
+  for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (wrap(g, text, mid).length <= base.length) hi = mid; else lo = mid; }
+  return wrap(g, text, hi);
+}
+
+function shade(g, w, h, from, alpha) {
+  const gr = g.createLinearGradient(0, h * from, 0, h);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.45, `rgba(0,0,0,${alpha * .6})`); gr.addColorStop(1, `rgba(0,0,0,${alpha})`);
+  g.fillStyle = gr; g.fillRect(0, h * from, w, h * (1 - from));
+}
+
+function textBlock(g, lines, x, y, size, weight, color, lh) {
+  g.font = `${weight} ${size}px "Gmarket Sans"`; g.fillStyle = color; g.textBaseline = 'alphabetic';
+  g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 18; g.shadowOffsetY = 3;
+  lines.forEach((l, i) => g.fillText(l, x, y + i * size * lh));
+  g.restore();
+}
+
+// 장면 글 (아래쪽, 위아래 15%는 앱 버튼 자리라 비운다)
+function drawCaption(g, s, w, h, a, vertical) {
+  if (!s.cap && !s.sub) return;
+  const pad = 80, maxW = w - pad * 2 - (vertical ? 70 : 0);
+  const cs = vertical ? 68 : 60, ss = vertical ? 40 : 36;
+  g.font = `700 ${cs}px "Gmarket Sans"`; const cl = s.cap ? wrapBal(g, s.cap, maxW) : [];
+  g.font = `500 ${ss}px "Gmarket Sans"`; const sl = s.sub ? wrapBal(g, s.sub, maxW) : [];
+  const bottom = vertical ? h * .80 : h - 90;
+  const blockH = cl.length * cs * 1.3 + (sl.length ? 18 + sl.length * ss * 1.4 : 0);
+  let y = bottom - blockH + cs;
+  g.save(); g.globalAlpha *= a; g.translate(0, (1 - a) * 30);
+  g.fillStyle = S.color; g.fillRect(pad, y - cs - 26, 64, 8);
+  textBlock(g, cl, pad, y, cs, 700, '#fff', 1.3);
+  if (sl.length) textBlock(g, sl, pad, y + cl.length * cs * 1.3 + 14 + ss * .2, ss, 500, 'rgba(255,255,255,.9)', 1.4);
+  g.restore();
+}
+
+function drawTitle(g, w, h, a, vertical) {
+  const title = $('title').value.trim(), tag = $('tag').value.trim();
+  if (!title && !tag) return;
+  const pad = 80, maxW = w - pad * 2;
+  const ts = vertical ? 104 : 88;
+  g.save(); g.globalAlpha *= a; g.translate(0, (1 - a) * 40);
+  const topShade = g.createLinearGradient(0, 0, 0, h * .55);
+  topShade.addColorStop(0, 'rgba(0,0,0,.55)'); topShade.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = topShade; g.fillRect(0, 0, w, h * .55);
+  let y = vertical ? h * .2 : h * .12;
+  if (tag) {
+    g.font = `500 38px "Gmarket Sans"`;
+    const tw = g.measureText(tag).width;
+    g.fillStyle = S.color; roundRect(g, pad, y, tw + 44, 64, 32); g.fill();
+    g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.fillText(tag, pad + 22, y + 34);
+    y += 64 + 30;
+  }
+  if (title) {
+    g.font = `700 ${ts}px "Gmarket Sans"`;
+    textBlock(g, wrapBal(g, title, maxW), pad, y + ts, ts, 700, '#fff', 1.22);
+  }
+  g.restore();
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+
+function drawEnd(g, w, h, a, vertical) {
+  g.fillStyle = S.color; g.fillRect(0, 0, w, h);
+  const main = $('endMain').value.trim(), sub = $('endSub').value.trim();
+  const pad = 90, maxW = w - pad * 2, ms = vertical ? 92 : 80, ss = vertical ? 44 : 40;
+  g.save(); g.globalAlpha *= a; g.translate(0, (1 - a) * 30);
+  g.font = `700 ${ms}px "Gmarket Sans"`; const ml = main ? wrapBal(g, main, maxW) : [];
+  g.font = `500 ${ss}px "Gmarket Sans"`; const sl = sub ? wrapBal(g, sub, maxW) : [];
+  const blockH = ml.length * ms * 1.25 + (sl.length ? 60 + sl.length * ss * 1.5 : 0);
+  let y = h * .45 - blockH / 2 + ms;
+  g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(pad, y - ms - 40, 80, 10);
+  g.fillStyle = '#fff'; g.textBaseline = 'alphabetic';
+  g.font = `700 ${ms}px "Gmarket Sans"`; ml.forEach((l, i) => g.fillText(l, pad, y + i * ms * 1.25));
+  y += ml.length * ms * 1.25 + 40;
+  g.fillStyle = 'rgba(255,255,255,.88)'; g.font = `500 ${ss}px "Gmarket Sans"`;
+  sl.forEach((l, i) => g.fillText(l, pad, y + i * ss * 1.5));
+  g.restore();
+}
+
+// 장면 하나 (k = -1 이면 마지막 화면)
+function drawScene(g, k, w, h, local, span, opt) {
+  const vertical = h / w > 1.5, still = opt && opt.still;
+  if (k < 0) { drawEnd(g, w, h, still ? 1 : textIn(local), vertical); return; }
+  const s = S.scenes[k];
+  drawPhoto(g, s, w, h, clamp(local / span, 0, 1), k, still);
+  if (s.cap || s.sub) shade(g, w, h, .45, .72);
+  const a = still ? 1 : textIn(local);
+  if (k === 0) drawTitle(g, w, h, a, vertical);
+  drawCaption(g, s, w, h, k === 0 ? (still ? 1 : textIn(local - .5)) : a, vertical);
+  if (opt && opt.page) {
+    g.font = '500 30px "Gmarket Sans"'; g.fillStyle = 'rgba(255,255,255,.9)'; g.textAlign = 'right'; g.textBaseline = 'top';
+    g.fillText(opt.page, w - 50, 46); g.textAlign = 'left';
+  }
+}
+const textIn = t => ease(clamp((t - FADE - .1) / .5, 0, 1));
+
+// 시각 t의 한 장면
+function frame(g, t) {
+  const n = S.scenes.length, D = S.dur;
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  if (!n) return;
+  const k = Math.min(Math.floor(t / D), n); // n 이면 마지막 화면
+  const start = k * D, local = t - start + FADE, span = D + FADE;
+  const idx = i => (i === n ? -1 : i);
+  if (k > 0 && t - start < FADE) {
+    drawScene(g, idx(k - 1), W, H, t - (k - 1) * D + FADE, span);
+    g.save(); g.globalAlpha = ease((t - start) / FADE);
+    drawScene(g, idx(k), W, H, local, span);
+    g.restore();
+  } else drawScene(g, idx(k), W, H, local, span);
+}
+
+function drawStill(k) {
+  if (S.playing) return;
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (!S.scenes.length) { ctx.fillStyle = '#777'; ctx.font = '500 48px "Gmarket Sans"'; ctx.textAlign = 'center'; ctx.fillText('사진을 넣어 주세요', W / 2, H / 2); ctx.textAlign = 'left'; return; }
+  if (k === undefined) k = 0;
+  if (k === -1) drawScene(ctx, -1, W, H, 0, 1, { still: true });
+  else drawScene(ctx, clamp(k, 0, S.scenes.length - 1), W, H, S.dur * .5, S.dur + FADE, { still: true });
+}
+
+// ---------- 미리 보기 ----------
+$('play').onclick = () => {
+  if (!S.scenes.length) return say('사진을 먼저 넣어 주세요.', true);
+  if (S.playing) { S.playing = false; return; }
+  S.playing = true; $('play').textContent = '■ 멈추기';
+  const t0 = performance.now(), T = total();
+  const step = () => {
+    const t = (performance.now() - t0) / 1000;
+    if (!S.playing || t >= T) { S.playing = false; $('play').textContent = '▶ 미리 보기'; setProg(0); drawStill(); return; }
+    frame(ctx, t); setProg(t / T); requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+};
+
+// ---------- 영상 만들기 ----------
+function setProg(r) { $('prog').style.width = Math.round(r * 100) + '%'; }
+function say(t, err) { const m = $('msg'); m.textContent = t; m.className = 'msg' + (err ? ' err' : ''); }
+function stamp() { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; }
+function save(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000); }
+
+async function pickCodec() {
+  if (!('VideoEncoder' in window)) return null;
+  const tries = [['avc1.640028', 'avc'], ['avc1.4d0028', 'avc'], ['avc1.42003e', 'avc'], ['vp09.00.40.08', 'vp9']];
+  for (const [codec, kind] of tries) {
+    try {
+      const r = await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate: 8e6, framerate: FPS });
+      if (r.supported) return { codec, kind };
+    } catch (e) {}
+  }
+  return null;
+}
+
+async function makeVideo() {
+  if (!S.scenes.length) return say('사진을 먼저 넣어 주세요.', true);
+  S.playing = false;
+  const btns = [$('mkVideo'), $('mkCards'), $('play')]; btns.forEach(b => b.disabled = true);
+  try {
+    await fontsReady();
+    const pick = await pickCodec();
+    if (!pick) { say('이 브라우저는 영상 만들기를 지원하지 않습니다. 크롬이나 엣지 최신판으로 열어 주세요.', true); return; }
+    say('영상을 만드는 중입니다…');
+    const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: pick.kind, width: W, height: H, frameRate: FPS }, fastStart: 'in-memory' });
+    let fail = null;
+    const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => { fail = e; } });
+    enc.configure({ codec: pick.codec, width: W, height: H, bitrate: 8e6, framerate: FPS, ...(pick.kind === 'avc' ? { avc: { format: 'avc' } } : {}) });
+    const off = document.createElement('canvas'); off.width = W; off.height = H;
+    const g = off.getContext('2d');
+    const N = Math.round(total() * FPS);
+    for (let i = 0; i < N; i++) {
+      if (fail) throw fail;
+      frame(g, i / FPS);
+      const vf = new VideoFrame(off, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+      enc.encode(vf, { keyFrame: i % (FPS * 2) === 0 }); vf.close();
+      if (i % 10 === 0) { ctx.drawImage(off, 0, 0); setProg(i / N); }
+      while (enc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 5));
+    }
+    await enc.flush(); enc.close(); muxer.finalize();
+    if (fail) throw fail;
+    const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+    window.SM_lastVideo = blob; // 시험용
+    save(blob, `숏폼_${stamp()}.mp4`);
+    setProg(1);
+    say(`다 만들었습니다 (${Math.round(total())}초, ${(blob.size / 1048576).toFixed(1)}MB). 다운로드 폴더를 확인하세요.` + (pick.kind === 'vp9' ? ' ※ 이 브라우저는 H.264를 지원하지 않아 VP9로 만들었습니다. 인스타그램에 올라가지 않으면 크롬으로 다시 만들어 주세요.' : ''));
+  } catch (e) {
+    console.error(e); say('영상을 만들지 못했습니다: ' + (e && e.message || e), true);
+  } finally { btns.forEach(b => b.disabled = false); drawStill(); }
+}
+$('mkVideo').onclick = makeVideo;
+
+// ---------- 카드뉴스 (4:5) ----------
+async function makeCards() {
+  if (!S.scenes.length) return say('사진을 먼저 넣어 주세요.', true);
+  const btns = [$('mkVideo'), $('mkCards'), $('play')]; btns.forEach(b => b.disabled = true);
+  try {
+    await fontsReady();
+    const cw = 1080, ch = 1350, n = S.scenes.length + 1, files = [];
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const g = c.getContext('2d');
+    for (let k = 0; k < n; k++) {
+      g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
+      const idx = k === n - 1 ? -1 : k;
+      drawScene(g, idx, cw, ch, 0, 1, { still: true, page: `${k + 1}/${n}` });
+      const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      files.push({ name: `카드_${String(k + 1).padStart(2, '0')}.png`, data: new Uint8Array(await blob.arrayBuffer()) });
+      setProg((k + 1) / n);
+    }
+    save(zip(files), `카드뉴스_${stamp()}.zip`);
+    say(`카드뉴스 ${n}장을 묶음 파일(zip)로 받았습니다. 압축을 풀어 인스타그램 피드에 순서대로 올리세요.`);
+  } catch (e) { console.error(e); say('카드뉴스를 만들지 못했습니다: ' + (e && e.message || e), true); }
+  finally { btns.forEach(b => b.disabled = false); }
+}
+$('mkCards').onclick = makeCards;
+
+// 압축하지 않는 zip (사진은 이미 압축돼 있어 충분하다)
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(d) { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true); lh.setUint16(26, name.length, true);
+    parts.push(new Uint8Array(lh.buffer), name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true); ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + sz;
+  }
+  const csz = central.reduce((a, b) => a + b.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, csz, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
+function fontsReady() {
+  return Promise.all(['500 40px "Gmarket Sans"', '700 40px "Gmarket Sans"'].map(f => document.fonts.load(f, '가나다')));
+}
+window.SM = S; window.SM_makeVideo = makeVideo; window.SM_makeCards = makeCards; window.SM_frame = frame; // 시험용
+fontsReady().then(() => drawStill());
+})();
+</script>
