@@ -220,8 +220,8 @@ details.sec .sum{font-size:.85rem;color:var(--muted)}
   <header class="top">
     <div><h1>블로그 첨삭</h1><p class="hint">업체 기준으로 블로그 글을 검수하고 대표님께 보낼 첨삭지를 만듭니다</p></div>
     <nav class="tabs" role="tablist" id="tabs" hidden>
-      <button role="tab" data-tab="review" aria-selected="true">검수</button>
       <button role="tab" data-tab="biz" aria-selected="false">업체</button>
+      <button role="tab" data-tab="review" aria-selected="true">검수</button>
       <button role="tab" data-tab="history" aria-selected="false">기록</button>
       <button id="logout" title="이 컴퓨터에 기억한 암호를 지웁니다">나가기</button>
     </nav>
@@ -378,10 +378,14 @@ $("#kwAdd").onclick=()=>kwRow({type:"지역+업종"});
 $("#bzCap").onchange=async e=>{
   const files=[...e.target.files]; if(!files.length) return; status($("#bzCapStatus"),"캡처를 읽는 중… (20초 정도)");
   try{ const imgs=await Promise.all(files.map(f=>toJpeg(f,1600))); const p=await api("readPlaceCapture",{images:imgs.map(x=>x.split(",")[1])});
-    if(p.name&&!$("#bzName").value) $("#bzName").value=p.name; if(p.address) $("#bzAddr").value=p.address; if(p.phone) $("#bzPhone").value=p.phone;
+    const cur=$("#bzName").value.trim(), same=(x,y)=>x.replace(/\s/g,"")===y.replace(/\s/g,""), other=p.name&&cur&&!same(p.name,cur);
+    // 지금 열린 업체와 다른 가게의 캡처면, 그 업체를 덮어쓰지 않도록 새 업체 등록으로 바꿉니다.
+    if(other&&EDIT_BIZ){ EDIT_BIZ=null; $("#bizFormTitle").textContent="업체 등록"; fillBiz(null) }
+    if(p.name&&(!$("#bzName").value.trim()||other)){ const k0=$$("#kwRows .kw")[0]; if(k0&&(!k0.value||same(k0.value,cur))) k0.value=p.name; $("#bzName").value=p.name }
+    if(p.address) $("#bzAddr").value=p.address; if(p.phone) $("#bzPhone").value=p.phone;
     if(p.hours) $("#bzHours").value=[p.hours,p.closed].filter(Boolean).join(" / "); $("#bzChecked").value=p.checkedAt||"";
     if(p.name&&$$("#kwRows .kw")[0]&&!$$("#kwRows .kw")[0].value) $$("#kwRows .kw")[0].value=p.name;
-    status($("#bzCapStatus"),"채웠습니다. 칸이 맞는지 확인하고 저장해 주세요.");
+    status($("#bzCapStatus"),other?`"${cur}"와 다른 업체(${p.name})라서 새 업체 등록으로 바꿨습니다. 칸이 맞는지 확인하고 저장해 주세요.`:"채웠습니다. 칸이 맞는지 확인하고 저장해 주세요.");
   }catch(err){ status($("#bzCapStatus"),err.message,true) } };
 $("#bzSave").onclick=async()=>{
   const rules={}; $$("#ruleRows tr").forEach(tr=>{ const v=tr.querySelector(".rv"); rules[tr.dataset.k]={value:v?+v.value:"",level:tr.querySelector(".rl").value} });
@@ -421,9 +425,12 @@ $("#rvGo").onclick=async()=>{
   if(src==="text"){ req.text=$("#rvText").value; if(!req.text.trim()) return status($("#rvStatus"),"원고를 붙여 넣어 주세요.",true) }
   if(src==="capture"){ if(!CAPTURE.length) return status($("#rvStatus"),"캡처를 올려 주세요.",true); req.images=CAPTURE.map(d=>d.split(",")[1]) }
   ls.set("br_lastBiz",bizId); $("#rvGo").disabled=true; $("#result").innerHTML="";
-  status($("#rvStatus"),"글을 읽고, 키워드 근거를 조회하고, 첨삭하는 중입니다. 1분 정도 걸립니다…");
+  const t0=Date.now(), steps=["글을 읽는 중","키워드 검색 결과를 조회하는 중","AI가 첨삭하는 중","AI가 첨삭하는 중 (글이 길면 조금 더 걸립니다)"];
+  const tick=()=>{ const s=Math.round((Date.now()-t0)/1000), m=Math.floor(s/60), st=steps[Math.min(steps.length-1,s<8?0:s<25?1:s<150?2:3)];
+    status($("#rvStatus"),`${st}… ${m?m+"분 ":""}${s%60}초 지났습니다. 보통 1~3분, 길면 5분 걸립니다. 창을 닫지 말고 기다려 주세요.`) };
+  tick(); const timer=setInterval(tick,1000);
   try{ const r=await api("review",req); r._capture=src==="capture"?CAPTURE.slice():null; CUR=r; status($("#rvStatus"),r.aiError||""); renderSheet(); $("#result").scrollIntoView({behavior:"smooth",block:"start"}) }
-  catch(e){ status($("#rvStatus"),e.message,true) } finally{ $("#rvGo").disabled=false } };
+  catch(e){ status($("#rvStatus"),(Date.now()-t0>330000?"검수가 너무 오래 걸려 서버가 멈췄습니다(최대 6분). 잠시 뒤 다시 눌러 주세요. ":"")+e.message,true) } finally{ clearInterval(timer); $("#rvGo").disabled=false } };
 
 /* ---------- 첨삭지 그리기 ---------- */
 const TAGCLS={"수정 필요":"must","추가 확인":"check","확인 불가":"check","권장":"suggest"};
@@ -605,9 +612,11 @@ async function printPdf(){
   if(EDIT){ collectEdits(); EDIT=false; renderSheet(); await saveEdits() }
   const ds=$$("#sheet details"), opened=ds.map(d=>d.open); ds.forEach(d=>d.open=true);
   const t=document.title; document.title=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}`;
+  const theme=document.documentElement.getAttribute("data-theme"); document.documentElement.setAttribute("data-theme","light");
   document.body.classList.add("printing"); if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,0);
   await new Promise(ok=>setTimeout(ok,300));
   window.print();
+  if(theme) document.documentElement.setAttribute("data-theme",theme); else document.documentElement.removeAttribute("data-theme");
   document.title=t; document.body.classList.remove("printing"); ds.forEach((d,i)=>d.open=opened[i]); if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50);
 }
 const IMGQ=[]; let imgT=null;
@@ -642,6 +651,8 @@ async function downloadPdf(){
   if(EDIT){ collectEdits(); EDIT=false; renderSheet(); await saveEdits() }
   const btn=$("#pdfBtn"); btn.disabled=true; status($("#shStatus"),"PDF를 만드는 중입니다. 사진이 많으면 30초쯤 걸립니다…");
   const sheet=$("#sheet"), ds=$$("#sheet details"), opened=ds.map(d=>d.open); ds.forEach(d=>d.open=true);
+  // 화면이 어두운 모드여도 PDF는 항상 밝은 종이 색으로 만듭니다.
+  const theme=document.documentElement.getAttribute("data-theme"); document.documentElement.setAttribute("data-theme","light");
   const name=`첨삭지_${CUR.bizName}_${CUR.createdAt.slice(0,10)}.pdf`.replace(/[\\/:*?"<>|]/g,"_");
   try{
     sheet.classList.add("exporting"); sheet.style.width="840px";
@@ -673,7 +684,7 @@ async function downloadPdf(){
     const url=URL.createObjectURL(pdf.output("blob")), a=document.createElement("a"); a.href=url; a.download=name; a.style.display="none"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
     status($("#shStatus"),`다운로드 폴더에 "${name}" 파일로 내려받았습니다.`);
   }catch(e){ console.error(e); status($("#shStatus"),"PDF를 바로 만들지 못해 인쇄 창으로 엽니다. 대상에서 \"PDF로 저장\"을 골라 주세요.",true); setTimeout(printPdf,400) }
-  finally{ sheet.classList.remove("exporting"); sheet.style.width=""; ds.forEach((d,i)=>d.open=opened[i]); btn.disabled=false; if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50) }
+  finally{ if(theme) document.documentElement.setAttribute("data-theme",theme); else document.documentElement.removeAttribute("data-theme"); sheet.classList.remove("exporting"); sheet.style.width=""; ds.forEach((d,i)=>d.open=opened[i]); btn.disabled=false; if(CUR._frame&&CUR._frame._draw) setTimeout(CUR._frame._draw,50) }
 }
 async function exportPng(){
   collectEdits(); const wasEdit=EDIT; if(EDIT){ EDIT=false; renderSheet() }

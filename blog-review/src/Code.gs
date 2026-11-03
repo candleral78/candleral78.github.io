@@ -564,7 +564,7 @@ function machineChecks_(biz, doc, ctx, prevImageKeys) {
 
   // 6. 전화번호 대조
   if (biz.phone) {
-    var phoneRe = /(0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4})/g, pm, wrongPhones = [];
+    var phoneRe = /(?:^|[^\d])(0\d{1,3}[-.\s]?\d{3,4}[-.\s]?\d{4})(?!\d)/g, pm, wrongPhones = [];
     textOf_(B).forEach(function (t) { while ((pm = phoneRe.exec(t))) if (digits_(pm[1]) !== digits_(biz.phone)) wrongPhones.push(pm[1]); });
     if (wrongPhones.length) add({
       area: '업체 정보', status: '수정 필요', title: '전화번호가 등록 정보와 다름', blocks: [firstBlockWith_(B, wrongPhones[0])],
@@ -986,7 +986,8 @@ function softenTone_(s) {
 function runReview_(req) {
   var biz = getRow_('biz', req.bizId); if (!biz) throw fail_('no_biz', '업체를 먼저 등록해 주세요.');
   var ctx = { source: req.source, postType: req.postType || '', sponsored: req.sponsored || '', aiImages: req.aiImages || '', keywords: (req.keywords || []).filter(String).slice(0, 3) };
-  var doc = loadPost_(req);
+  var T0 = Date.now(), timing = {}, lap = function (k) { timing[k] = Math.round((Date.now() - T0) / 100) / 10; };
+  var doc = loadPost_(req); lap('글 읽기');
   // 이전 검수의 사진 목록 (사진 재사용 확인)
   var prev = {}, sameUrl = null;
   listRows_('reviews').forEach(function (r) {
@@ -998,12 +999,13 @@ function runReview_(req) {
   // 키워드 근거: 목표 키워드 + 상호 외 핵심 키워드(최대 3개)
   var evKws = ctx.keywords.slice();
   (biz.coreKeywords || []).forEach(function (k) { if (k.type !== '상호' && evKws.length < 3 && evKws.indexOf(k.kw) < 0) evKws.push(k.kw); });
-  var evidence = evKws.map(function (k) { try { return keywordEvidence_(k, doc.url); } catch (e) { return { kw: k, error: String(e.message || e) }; } });
+  var evidence = evKws.map(function (k) { try { return keywordEvidence_(k, doc.url); } catch (e) { return { kw: k, error: String(e.message || e) }; } }); lap('키워드 근거');
   machine.keywordTable.forEach(function (row) { var e = evidence.filter(function (x) { return nsp_(x.kw) === nsp_(row.kw); })[0]; if (e) row.evidence = { volume: e.volume || null, at: e.at, apiTotal: e.apiTotal, link: e.searchLink, rankScreen: e.postRankScreen, rankApi: e.postRankApi }; });
   var ai = { findings: [], good: [], error: '' };
   if (req.skipAi) ai.error = 'AI 첨삭을 건너뛰었습니다.';
   else { try { ai = aiReview_(biz, doc, ctx, machine); } catch (e) { ai.error = e.code === 'quota' ? '오늘 무료 AI 한도를 모두 썼습니다. 기계 검사 결과만 저장했습니다.' : 'AI 첨삭 실패: ' + (e.message || e); } }
-  var tags = tagSuggest_(biz, ctx, ai.tags || []);
+  lap('AI 첨삭'); timing.model = ai.model || '';
+  var tags = tagSuggest_(biz, ctx, ai.tags || []); lap('해시태그');
   // 기계 검사 지적에 이 글에 맞춘 AI 예시를 붙입니다.
   machine.findings.forEach(function (f) {
     if (ai.examples && ai.examples[f.id] && EXAMPLE_TITLES_.test(f.title)) { f.suggestion = ai.examples[f.id]; f.exampleBy = 'AI'; }
@@ -1028,8 +1030,9 @@ function runReview_(req) {
     tags: doc.tags || null, tagSuggest: tags, aiSearch: ai.aiSearch || [], summaryBox: ai.summaryBox || [], faq: ai.faq || [], nextTopics: nt,
     viewHtml: doc.viewHtml || '', viewCss: doc.viewCss || [],
     bizSnapshot: { name: biz.name, phone: biz.phone, address: biz.address, placeId: biz.placeId, placeCheckedAt: biz.placeCheckedAt, coreKeywords: biz.coreKeywords || [] },
-    previousReviewId: sameUrl ? sameUrl.id : ''
+    previousReviewId: sameUrl ? sameUrl.id : '', timing: timing
   };
+  try { Logger.log('검수 시간(누적 초): ' + JSON.stringify(timing)); } catch (eL) { }
   var id = 'r' + new Date().getTime();
   var store = JSON.parse(JSON.stringify(review));
   if (req.source === 'capture') store.captureNote = '캡처 이미지는 저장하지 않습니다(화면에서만 사용).';
@@ -1049,10 +1052,16 @@ function gemini_(prompt, images, wantJson, tier) {
   if (wantJson) body.generationConfig.responseMimeType = 'application/json';
   var last = '', quota = 0;
   for (var i = 0; i < models.length; i++) {
-    var r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(models[i]) + ':generateContent', {
+    // 생각(추론)을 짧게 해서 응답 시간을 줄입니다. 모델이 이 설정을 모르면 설정 없이 다시 보냅니다.
+    var b2 = JSON.parse(JSON.stringify(body)); if (/gemini-3/.test(models[i])) b2.generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+    var t0 = Date.now(), r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(models[i]) + ':generateContent', {
+      method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': key }, payload: JSON.stringify(b2), muteHttpExceptions: true
+    });
+    if (r.getResponseCode() === 400 && /thinking/i.test(r.getContentText())) r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(models[i]) + ':generateContent', {
       method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': key }, payload: JSON.stringify(body), muteHttpExceptions: true
     });
     var code = r.getResponseCode(), txt = r.getContentText();
+    try { Logger.log('Gemini ' + models[i] + ' → ' + code + ' (' + Math.round((Date.now() - t0) / 1000) + '초)'); } catch (eL) { }
     if (code === 429) { quota++; last = '한도'; continue; }
     if (code === 404 || code === 400 && /not found|not supported|is not available/i.test(txt)) { last = '모델 없음(' + models[i] + ')'; continue; }
     if (code >= 500) { last = '일시 오류'; continue; }
@@ -1061,7 +1070,7 @@ function gemini_(prompt, images, wantJson, tier) {
     var c = j.candidates && j.candidates[0], t = '';
     if (c && c.content && c.content.parts) c.content.parts.forEach(function (p) { if (p.text && !p.thought) t += p.text; });
     if (!t.trim()) { last = '빈 응답'; continue; }
-    return { text: t, model: models[i] };
+    return { text: t, model: models[i], tries: i + 1 };
   }
   if (quota === models.length) throw fail_('quota', '오늘 무료 AI 한도를 모두 썼습니다.');
   throw fail_('upstream_error', 'AI 응답을 받지 못했습니다. (' + last + ')');

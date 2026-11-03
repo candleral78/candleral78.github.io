@@ -86,6 +86,12 @@ check('상호가 첫 문단에 있으면 상호 지적 없음', !rw.findings.som
 check('표가 있으면 표·묻고 답하기 지적 없음', !rw.findings.some(f => f.title === '표·묻고 답하기 없음'));
 check('[확인 필요] → 확인해 주세요', rw.findings.some(f => f.title === '확인이 필요한 칸'));
 
+console.log('== 안심번호(0507)');
+const vb = call('saveBiz', { biz: { name: '인수바이올린', industry: '학원·교육', phone: '0507-1312-6795' } }).data;
+const v1 = call('review', { bizId: vb, source: 'text', text: '인수바이올린 연락처 0507-1312-6795\n\n인수바이올린입니다. 상담은 0507-1312-6795로 주세요.', skipAi: true }).data;
+check('같은 0507 번호는 다르다고 하지 않음', !v1.findings.some(f => /전화번호/.test(f.title)), v1.findings.map(f => f.comment).filter(c => /전화/.test(c)));
+const v2 = call('review', { bizId: vb, source: 'text', text: '인수바이올린 상담 0507-1312-6796', skipAi: true }).data;
+check('다른 0507 번호는 전체 번호로 지적', v2.findings.some(f => /0507-1312-6796/.test(f.comment)), v2.findings.map(f => f.title));
 console.log('== 캡처 검수');
 const r4 = call('review', { bizId, source: 'capture', images: ['AAAA', 'BBBB'] }).data;
 check('캡처 블록에 이미지 번호·좌표', r4.blocks.every(b => typeof b.img === 'number' && Array.isArray(b.box)));
@@ -94,7 +100,7 @@ check('캡처 화면 표시', r4.view === '실제 화면');
 
 console.log('== 목록·수정');
 const list = call('listReviews', { bizId }).data;
-check('검수 목록 5개', list.length === 5, list.length);
+check('검수 목록 5개', list.filter(x => x.bizId === bizId).length === 5, list.length);
 check('코멘트 수정 저장', call('saveReview', { id: R.id, patch: { note: '확인함' } }).ok && call('getReview', { id: R.id }).data.note === '확인함');
 
 console.log('== AI 한도');
