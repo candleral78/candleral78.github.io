@@ -47,6 +47,7 @@ python3 ../src/build.py --test        # app-test.html (서버 주소 http://loca
 node mock-server.mjs &                # Code.gs를 가짜 시트·가짜 Gemini로 실행
 node test-code-lock.mjs               # 업체 등록, 코드 6~8자리, 5회 오류 잠금, 코드 다시 정하기
 node test-card.mjs                    # 명함 자동 생성
+node test-owner-voice.mjs             # 대표님 화면 고객 목소리 넣기, 컨설턴트 자료 보호
 ```
 가짜 서버는 데이터를 기억하므로 시험 파일마다 다시 켠다. 가짜 서버의 컨설턴트 암호는 `admin1234`, 하루 한도는 2편이다.
 가짜 Gemini는 앞 모델(gemini-3.8-flash)을 일부러 한도 초과로 돌려 자동 전환을 시험한다.

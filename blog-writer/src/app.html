@@ -494,6 +494,9 @@ const store={
     if(db){const s=await db.doc("voices/"+id).get();return s.exists?JSON.parse(JSON.stringify(s.data())):null} return (ls.get("bw_voice")||{})[id]||null },
   async saveVoice(id,v){ if(REMOTE) return api("saveVoice",{id,voice:v});
     if(db){await db.doc("voices/"+id).set(v);return} const all=ls.get("bw_voice")||{};all[id]=v;ls.set("bw_voice",all) },
+  // 대표님 화면: 우리 업체 자료만 더합니다(참고 업체·벤치마킹은 서버가 그대로 둡니다).
+  async saveOwnVoice(id,v){ if(REMOTE) return api("saveOwnVoice",{id,voice:v,code:codeOf(id)});
+    if(db){await db.doc("voices/"+id).set(v);return} const all=ls.get("bw_voice")||{};all[id]=v;ls.set("bw_voice",all) },
   async delVoice(id){ if(REMOTE) return api("delVoice",{id});
     if(db){await db.doc("voices/"+id).delete();return} const all=ls.get("bw_voice")||{};delete all[id];ls.set("bw_voice",all) },
   async getReport(id){ if(REMOTE) return api("getReport",{id,code:codeOf(id)});
@@ -769,14 +772,29 @@ function setMode(m){ S.mode=m; [...$("q-mode").children].forEach(b=>b.setAttribu
   $("pane-b").hidden=m!=="b"; $("pane-a").hidden=m==="b"&&!(S.review&&S.review.pick); if(m==="a"&&S.review){S.review=null} renderPaneB(); }
 $("q-mode").addEventListener("click",e=>{ const b=e.target.closest("button[data-mode]"); if(b){setMode(b.dataset.mode);saveDraft()} });
 function setModeView(){ $("pane-a").hidden=S.mode==="b"&&!(S.review&&S.review.pick) }
+const OWN_ADD='<details class="box" id="o-v-box"%OPEN%><summary><b>손님 목소리 넣기</b> <small class="hint">후기·리뷰·문의를 넣으면 글감을 뽑아 드립니다</small></summary>'
+  +'<p class="hint">네이버 플레이스 방문자 리뷰, 손님이 쓴 블로그 후기, 톡톡·문자 문의를 붙여 넣거나 화면 캡처를 올려 주세요. 사실·반응·질문만 추려 쌓고, 원문과 사진은 저장하지 않습니다. 손님 이름이나 연락처가 크게 보이는 화면은 피해 주세요.</p>'
+  +'<label>글 붙여 넣기 <small>여러 건을 이어 붙여도 됩니다.</small><textarea id="o-v-text" style="min-height:90px"></textarea></label>'
+  +'<label>또는 화면 캡처 올리기 <small>JPG, PNG, PDF 여러 개</small><input type="file" id="o-v-file" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" multiple></label>'
+  +'<div class="row"><button type="button" class="btn" id="btn-o-v-add">넣고 글감 받기</button><span class="status" id="o-v-status"></span></div></details>';
 function renderPaneB(){ const v=S.voice, o=$("pane-b"), ideas=(v&&v.ideas)||[];
-  if(!ideas.length){ o.innerHTML='<div class="box"><b>아직 넣은 자료가 없습니다</b><p class="hint">손님 후기, 리뷰, 문의 내용을 컨설턴트 화면의 "고객 목소리 보관함"에 넣으면 여기에 글감이 나옵니다. 지금은 "주제를 직접 정하기"로 진행해 주세요.</p></div>'; return }
+  if(!ideas.length){ o.innerHTML='<div class="box"><b>아직 넣은 손님 목소리가 없습니다</b><p class="hint">아래에 손님 후기, 리뷰, 문의 내용을 넣으면 손님이 궁금해하는 것을 담은 글감을 골라 드립니다. 넣을 자료가 없으면 "주제를 직접 정하기"로 진행해 주세요.</p></div>'+OWN_ADD.replace("%OPEN%"," open"); return }
   const n=(v.sources||[]).reduce((a,x)=>a+(x.who==="own"?(+x.count||1):0),0);
   o.innerHTML='<div class="box"><b>쌓인 고객 목소리</b><span class="hint">마지막으로 넣은 날 '+esc(dayKst(v.updatedAt))+(n?" · 우리 업체 자료 "+n+"건 기준":"")+"</span>"
     +((v.topQuestions||[]).length?'<ul class="vlist">'+v.topQuestions.map(q=>"<li>"+esc(q)+"</li>").join("")+"</ul>":"")+"</div>"
     +"<b>이 질문을 반영한 글감</b>"+ideas.map((t,i)=>'<button class="rv-topic" data-i="'+i+'" aria-pressed="'+(!!(S.review&&S.review.pickIdx===i))+'"><span class="kind">'+esc(t.type||"")+"</span><b>"+esc(t.title)+"</b><small>"+esc(t.why||"")+"</small></button>").join("")
-    +'<p class="hint">글감을 누르면 주제가 채워지고 그 글에 맞는 질문을 바로 받습니다.</p>'; }
-$("pane-b").addEventListener("click",e=>{ const b=e.target.closest(".rv-topic"); if(!b||!S.voice)return; const t=(S.voice.ideas||[])[+b.dataset.i]; if(!t)return; const o=S.voice.own||{};
+    +'<p class="hint">글감을 누르면 주제가 채워지고 그 글에 맞는 질문을 바로 받습니다.</p>'+OWN_ADD.replace("%OPEN%",""); }
+$("pane-b").addEventListener("click",async e=>{
+  if(e.target.id==="btn-o-v-add"){ const st=$("o-v-status"), id=S.biz&&S.biz.id, text=$("o-v-text").value.trim(), raw=[...$("o-v-file").files]; if(!needAI(st))return;
+    if(!id){st.textContent="업체를 먼저 골라 주세요.";return}
+    if(!text&&!raw.length){st.textContent="글을 붙여 넣거나 캡처 파일을 올려 주세요.";return}
+    e.target.disabled=true;
+    try{ const v=fixVoice(S.voice?JSON.parse(JSON.stringify(S.voice)):null);
+      const msg=await addVoiceMaterial({id,text,raw,who:"own",refName:"",st,base:v,save:x=>id==="example"?Promise.resolve():store.saveOwnVoice(id,x)});
+      if(msg){ S.voice=v; renderPaneB(); const s2=$("o-v-status"); if(s2) s2.textContent=msg+" 위의 글감에서 골라 주세요."; saveDraft() }
+    }catch(err){ st.textContent=err&&err.code?errMsg(err):"넣지 못했습니다. 다시 눌러 주세요." } finally{ const b2=$("btn-o-v-add"); if(b2) b2.disabled=false }
+    return }
+  const b=e.target.closest(".rv-topic"); if(!b||!S.voice)return; const t=(S.voice.ideas||[])[+b.dataset.i]; if(!t)return; const o=S.voice.own||{};
   S.review={facts:(o.facts||[]).slice(0,14),liked:(o.liked||[]).slice(0,8),concerns:(o.concerns||[]).slice(0,8),notable:(o.notable||[]).slice(0,8),words:(o.words||[]).slice(0,10).map(w=>w.k),pick:t.type||"",pickIdx:+b.dataset.i};
   $("q-topic").value=t.title; $("pane-a").hidden=false; renderPaneB(); $("btn-qs").click(); });
 function parseKw(text){ return String(text||"").split("\n").map(l=>{ const c=l.split(/\t|,|\|/).map(x=>x.trim()).filter(x=>x!==""); if(c.length<2)return null; const num=x=>{const n=parseFloat(String(x||"").replace(/[^\d.]/g,""));return isFinite(n)?n:null}; const kw=c[0], sv=num(c[1]), dc=num(c[2]); return kw&&sv!==null&&!/^키워드$/.test(kw)?{kw,sv,dc}:null }).filter(Boolean).slice(0,60); }
@@ -1219,7 +1237,7 @@ $("v-out").addEventListener("click",async e=>{ const id=$("c-biz").value, st=$("
   if(e.target.id==="btn-v-ideas"){ if(!needAI(st))return; e.target.disabled=true; st.textContent="글감을 고르는 중입니다."; try{ await genIdeas(id); await store.saveVoice(id,curVoice); st.textContent="" }catch(err){ st.textContent=errMsg(err) } renderVoice(); }
   if(e.target.id==="btn-v-clear"){ if(e.target.dataset.sure!=="1"){ e.target.dataset.sure="1"; e.target.textContent="정말 비우려면 한 번 더 누르세요"; return }
     try{ await store.delVoice(id); curVoice=emptyVoice(); st.textContent="보관함을 비웠습니다." }catch(err){ st.textContent="비우지 못했습니다. 다시 눌러 주세요." } renderVoice(); } });
-async function genIdeas(id){ const v=curVoice, b=await bizOf(id)||{name:bizNameOf(id)}; const written=repPosts.filter(p=>p.bizId===id).map(p=>p.title).concat((b.past||[]).map(p=>p.title));
+async function genIdeas(id,vv){ const v=vv||curVoice, b=await bizOf(id)||{name:bizNameOf(id)}; const written=repPosts.filter(p=>p.bizId===id).map(p=>p.title).concat((b.past||[]).map(p=>p.title));
   const own=v.sources.filter(x=>x.who==="own").reduce((a,x)=>a+(+x.count||1),0);
   const r=await sample.json("소상공인 대표가 고객의 목소리를 재료로 자기 블로그에 새 글을 쓰려고 합니다. 아래 재료를 보고 세 가지를 만드세요.\n1) conflicts: 손님이 적은 사실 중 업체 정보와 다른 것을 '자료: .. / 업체 정보: ..' 형태로. 없으면 빈 배열. 업체 정보에 아예 없는 항목은 넣지 않습니다.\n2) topQuestions: 고객이 가장 궁금해하는 것 3개를 고객이 묻는 말투의 질문 문장으로.\n3) ideas: 이 질문들에 답하는 글감 3개. type은 다음 중 하나입니다.\n"+Object.keys(VARIANTS).map(k=>"- "+k+": "+VARIANTS[k]).join("\n")+"\n규칙: 우리 업체 자료가 "+own+"건입니다. 2건 미만이면 '모아 보기형'은 고르지 않습니다. title은 대표가 쓰는 글의 주제를 40자 이내로, why는 어떤 고객 목소리 때문에 이 글이 맞는지 한 문장으로 씁니다. 손님이 쓸 수 없고 운영자만 쓸 수 있는 글이어야 합니다. 이미 쓴 글과 겹치지 않게 합니다. 업계 참고 질문은 이 업종 손님의 일반적인 궁금증으로만 쓰고, 다른 업체의 이름이나 다른 업체와의 비교는 title과 why에 쓰지 않습니다. 우리 업체 자료가 없으면 업계 참고 질문에서 고릅니다.\n\n[우리 업체 고객 목소리]\n"+JSON.stringify({questions:v.own.questions,liked:v.own.liked,concerns:v.own.concerns,notable:v.own.notable,facts:v.own.facts,aspects:v.own.aspects.slice(0,12)})+"\n\n[업계 참고 질문]\n"+(v.ref.questions.join("\n")||"없음")+"\n\n[업체]\n"+bizText(b)+"\n\n[이미 쓴 글]\n"+(written.join("\n")||"없음")+'\n\n아래 JSON으로만 답하세요.\n{"conflicts":["자료: .. / 업체 정보: .."],"topQuestions":["..","..",".."],"ideas":[{"type":"뒷이야기형","title":"..","why":".."}]}',{cache:false});
   v.conflicts=(Array.isArray(r.conflicts)?r.conflicts:[]).map(String).slice(0,6); v.topQuestions=(Array.isArray(r.topQuestions)?r.topQuestions:[]).map(String).slice(0,3); v.ideas=(Array.isArray(r.ideas)?r.ideas:[]).filter(t=>t&&t.title).slice(0,3).map(t=>({type:String(t.type||""),title:String(t.title),why:String(t.why||"")})); }
@@ -1227,32 +1245,40 @@ async function genBench(){ const v=curVoice;
   const r=await sample.json("소상공인 경영 컨설턴트가 벤치마킹을 정리합니다. 참고 업체의 손님 후기에서 추린 내용과 우리 업체의 자료를 비교해 세 가지를 만드세요. 자료에 있는 것만 근거로 삼고, 참고 업체를 깎아내리거나 우리 업체를 추켜세우지 않습니다.\n1) strengths: 참고 업체 손님이 반복해 좋게 말한 것 3~5개. 각각 한 줄.\n2) gaps: 참고 업체 자료에는 있고 우리 업체 자료에는 보이지 않는 것 2~4개. 우리 자료가 적어서 안 보이는 것일 수 있으면 그렇게 적습니다.\n3) actions: 우리 업체가 가져올 수 있는 적용점 3~5개. 작은 가게가 한 달 안에 실행할 수 있는 구체적인 한 줄(예: 점심 대기 시간을 입구에 적어 두기). 그대로 따라 하기가 아니라 우리 업체에 맞게 바꾼 것으로 씁니다.\n\n[참고 업체 자료]\n"+JSON.stringify({liked:v.ref.liked,notable:v.ref.notable,concerns:v.ref.concerns,questions:v.ref.questions,aspects:v.ref.aspects.slice(0,12)})+"\n\n[우리 업체 자료]\n"+JSON.stringify({liked:v.own.liked,notable:v.own.notable,concerns:v.own.concerns,questions:v.own.questions,aspects:v.own.aspects.slice(0,12)})+'\n\n아래 JSON으로만 답하세요.\n{"strengths":[".."],"gaps":[".."],"actions":[".."]}',{cache:false});
   v.bench.strengths=(Array.isArray(r.strengths)?r.strengths:[]).map(String).slice(0,6); v.bench.gaps=(Array.isArray(r.gaps)?r.gaps:[]).map(String).slice(0,5);
   const keep=(v.bench.actions||[]).filter(a=>a&&a.text&&(a.done||a.mine)); (Array.isArray(r.actions)?r.actions:[]).map(String).slice(0,6).forEach(t=>{ if(t&&!keep.some(a=>a.text===t)) keep.push({text:t,done:false,when:""}) }); v.bench.actions=keep.slice(0,12); }
-$("btn-v-add").onclick=async()=>{
-  const st=$("v-status"), id=$("c-biz").value, text=$("v-text").value.trim(), raw=[...$("v-file").files], refName=$("v-refname").value.trim(); if(!needAI(st))return;
-  if(!id){st.textContent="업체를 먼저 골라 주세요.";return}
-  if(!text&&!raw.length){st.textContent="글을 붙여 넣거나 캡처 파일을 올려 주세요.";return}
-  if(vWho==="ref"&&!refName){st.textContent="참고 업체 이름을 적어 주세요.";return}
-  $("btn-v-add").disabled=true; st.textContent="자료를 읽는 중입니다. 캡처가 많으면 1~2분 걸립니다.";
-  try{
+/* 고객 목소리 자료를 읽어 보관함에 합칩니다. 컨설턴트 화면과 대표님 화면이 함께 씁니다. 성공하면 결과 문장을, 못 읽으면 null을 돌려줍니다. */
+async function addVoiceMaterial({id,text,raw,who,refName,st,base,save,bench}){
+    st.textContent="자료를 읽는 중입니다. 캡처가 많으면 1~2분 걸립니다.";
     let imgs=[]; for(const f of raw){ if(isPdf(f)){ if(window.pdfjsLib){ try{ imgs=imgs.concat(await pdfToSlices(f,8)) }catch(e){} } } else if(/^image\//.test(f.type)) imgs.push(f) }
-    if(raw.length&&!imgLimit){ if(!text){st.textContent="이 화면에서는 캡처를 읽을 수 없습니다. 글을 붙여 넣어 주세요.";return} imgs=[] }
-    if(raw.length&&!imgs.length&&!text){st.textContent="읽을 수 있는 파일이 없습니다. JPG, PNG, PDF로 올려 주세요.";return}
+    if(raw.length&&!imgLimit){ if(!text){st.textContent="이 화면에서는 캡처를 읽을 수 없습니다. 글을 붙여 넣어 주세요.";return null} imgs=[] }
+    if(raw.length&&!imgs.length&&!text){st.textContent="읽을 수 있는 파일이 없습니다. JPG, PNG, PDF로 올려 주세요.";return null}
     const per=Math.max(1,imgLimit||1), batches=[]; for(let i=0;i<imgs.length&&batches.length<4;i+=per) batches.push(imgs.slice(i,i+per));
     const skipped=imgs.length-batches.reduce((a,b)=>a+b.length,0);
     const ask="고객의 목소리가 담긴 자료에서 글감 재료만 추립니다. 자료는 손님이 쓴 블로그 후기, 네이버 플레이스 방문자 리뷰, 문의 대화(톡톡·문자·Q&A), 블로그 유입 검색어 통계 중 하나이거나 섞여 있습니다. 어떤 종류인지 먼저 알아봅니다. 자료의 문장을 옮기지 말고 짧은 명사구나 한 줄 요약으로 씁니다. 자료에 실제로 있는 것만 쓰고 추측하지 않습니다. 화면의 메뉴, 광고, 다른 글 목록은 무시합니다. 손님 이름, 아이디, 전화번호는 쓰지 않습니다.\n아래 JSON으로만 답하세요.\n{\"kind\":\"블로그 후기 | 플레이스 리뷰 | 문의 내용 | 유입 검색어 | 기타 중 하나\",\"count\":자료에 든 후기·리뷰·문의의 건수(검색어 통계면 검색어 개수),\"facts\":[\"손님이 적은 사실: 영업시간, 휴무, 주차, 가격, 주문 방식 등 각각 한 줄\"],\"liked\":[\"좋았다고 한 점\"],\"concerns\":[\"아쉬웠거나 주의로 읽히는 점\"],\"notable\":[\"다른 곳과 달라 눈에 띈다고 한 점\"],\"questions\":[\"고객이 궁금해하는 것을 묻는 문장으로. 문의 내용이면 실제 질문, 후기면 읽는 사람이 궁금해할 것, 검색어면 그 검색어로 찾으려는 것\"],\"aspects\":[{\"k\":\"맛, 가격, 양, 주차, 대기, 친절, 위생, 분위기, 예약, 포장, 배송처럼 언급된 항목을 짧은 명사로\",\"n\":그 항목을 언급한 건수}],\"words\":[{\"k\":\"손님이 쓴 검색어 같은 말, 예: 가족외식\",\"n\":쓰인 건수}]}";
     const got={kind:"",count:0,facts:[],liked:[],concerns:[],notable:[],questions:[],aspects:[],words:[]}, add=r=>{ if(!r||typeof r!=="object")return; if(r.kind&&!got.kind)got.kind=String(r.kind).slice(0,12); got.count+=Math.max(0,Math.round(+r.count||0)); ["facts","liked","concerns","notable","questions"].forEach(k=>mergeList(got[k],r[k],40)); mergeCount(got.aspects,r.aspects); mergeCount(got.words,r.words) };
     if(text) add(await sample.json(ask+"\n\n[자료]\n"+text.slice(0,14000),{cache:false}));
     for(let i=0;i<batches.length;i++){ st.textContent="캡처를 읽는 중입니다 ("+(i+1)+"/"+batches.length+")."; add(await sample.json("첨부한 사진은 화면 캡처이거나, 긴 화면을 위에서 아래로 자른 조각들입니다. "+ask,{images:batches[i],cache:false})); }
-    if(!got.facts.length&&!got.liked.length&&!got.concerns.length&&!got.questions.length&&!got.words.length){st.textContent="자료 내용을 읽지 못했습니다. 글자를 붙여 넣거나 더 선명한 캡처로 올려 주세요.";return}
-    const v=curVoice&&!curVoice.example?curVoice:emptyVoice(), t=v[vWho];
+    if(!got.facts.length&&!got.liked.length&&!got.concerns.length&&!got.questions.length&&!got.words.length){st.textContent="자료 내용을 읽지 못했습니다. 글자를 붙여 넣거나 더 선명한 캡처로 올려 주세요.";return null}
+    const v=base, t=v[who];
     mergeList(t.facts,got.facts,40); mergeList(t.liked,got.liked,30); mergeList(t.concerns,got.concerns,30); mergeList(t.notable,got.notable,30); mergeList(t.questions,got.questions,30); mergeCount(t.aspects,got.aspects); mergeCount(t.words,got.words);
-    if(vWho==="ref"&&!v.ref.names.includes(refName)) v.ref.names.push(refName);
-    v.sources.push({at:new Date().toISOString(),who:vWho,refName:vWho==="ref"?refName:"",kind:got.kind||"기타",count:got.count||1}); if(v.sources.length>60)v.sources.splice(0,v.sources.length-60);
-    v.updatedAt=new Date().toISOString(); curVoice=v;
-    st.textContent="글감을 고르는 중입니다."; try{ await genIdeas(id) }catch(e){}
-    if(v.ref.liked.length||v.ref.questions.length){ st.textContent="벤치마킹을 정리하는 중입니다."; try{ if(vWho==="ref"||!v.bench.strengths.length) await genBench() }catch(e){} }
-    await store.saveVoice(id,v); $("v-text").value=""; $("v-file").value="";
-    st.textContent="넣었습니다. "+(got.kind?got.kind+" "+(got.count||1)+"건으로 읽었습니다.":"")+(skipped>0?" 캡처가 많아 앞부분만 읽었습니다.":""); renderVoice();
+    if(who==="ref"&&!v.ref.names.includes(refName)) v.ref.names.push(refName);
+    v.sources.push({at:new Date().toISOString(),who,refName:who==="ref"?refName:"",kind:got.kind||"기타",count:got.count||1}); if(v.sources.length>60)v.sources.splice(0,v.sources.length-60);
+    v.updatedAt=new Date().toISOString();
+    st.textContent="글감을 고르는 중입니다."; try{ await genIdeas(id,v) }catch(e){}
+    if(bench) await bench(v);
+    await save(v);
+    return "넣었습니다. "+(got.kind?got.kind+" "+(got.count||1)+"건으로 읽었습니다.":"")+(skipped>0?" 캡처가 많아 앞부분만 읽었습니다.":"");
+}
+$("btn-v-add").onclick=async()=>{
+  const st=$("v-status"), id=$("c-biz").value, text=$("v-text").value.trim(), raw=[...$("v-file").files], refName=$("v-refname").value.trim(); if(!needAI(st))return;
+  if(!id){st.textContent="업체를 먼저 골라 주세요.";return}
+  if(!text&&!raw.length){st.textContent="글을 붙여 넣거나 캡처 파일을 올려 주세요.";return}
+  if(vWho==="ref"&&!refName){st.textContent="참고 업체 이름을 적어 주세요.";return}
+  $("btn-v-add").disabled=true;
+  try{
+    const v=curVoice&&!curVoice.example?curVoice:emptyVoice(), who=vWho;
+    const msg=await addVoiceMaterial({id,text,raw,who,refName,st,base:v,save:x=>store.saveVoice(id,x),
+      bench:async x=>{ curVoice=x; if(x.ref.liked.length||x.ref.questions.length){ st.textContent="벤치마킹을 정리하는 중입니다."; try{ if(who==="ref"||!x.bench.strengths.length) await genBench() }catch(e){} } }});
+    if(msg){ curVoice=v; $("v-text").value=""; $("v-file").value=""; st.textContent=msg; renderVoice() }
   }catch(e){ st.textContent=e&&e.code?errMsg(e):"넣지 못했습니다. 다시 눌러 주세요." } finally{$("btn-v-add").disabled=false}
 };
 

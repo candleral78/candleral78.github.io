@@ -43,6 +43,28 @@ function hash_(s) {
   var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'bw:' + s, Utilities.Charset.UTF_8);
   return raw.map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
 }
+/**
+ * 대표님 화면에서 넣은 고객 목소리: 우리 업체 자료(own)·글감·질문만 바꾸고,
+ * 컨설턴트가 넣은 참고 업체 자료(ref)·벤치마킹(bench)·참고 자료 기록은 서버에 있던 그대로 둡니다.
+ */
+function saveOwnVoice_(id, v) {
+  if (!v || typeof v !== 'object') throw fail_('bad_request', '넣을 내용이 없습니다.');
+  if (JSON.stringify(v).length > 200000) throw fail_('prompt_too_large', '자료가 너무 많습니다. 나눠서 넣어 주세요.');
+  if (id === 'example') return true;
+  var old = getRow_('voices', id) || {};
+  var arr = function (x) { return Array.isArray(x) ? x : []; };
+  var out = {
+    updatedAt: String(v.updatedAt || new Date().toISOString()),
+    own: v.own && typeof v.own === 'object' ? v.own : (old.own || {}),
+    ref: old.ref || { names: [], facts: [], liked: [], concerns: [], notable: [], questions: [], aspects: [], words: [] },
+    bench: old.bench || { strengths: [], gaps: [], actions: [] },
+    conflicts: arr(v.conflicts).slice(0, 6), topQuestions: arr(v.topQuestions).slice(0, 3), ideas: arr(v.ideas).slice(0, 3),
+    sources: arr(old.sources).filter(function (x) { return x && x.who === 'ref'; })
+      .concat(arr(v.sources).filter(function (x) { return x && x.who === 'own'; }).map(function (x) { return { at: String(x.at || ''), who: 'own', refName: '', kind: String(x.kind || '기타').slice(0, 12), count: +x.count || 1, by: x.by === 'owner' ? 'owner' : '' }; }))
+      .sort(function (a, b) { return String(a.at).localeCompare(String(b.at)); }).slice(-60)
+  };
+  delete out.id; setRow_('voices', id, out); return true;
+}
 /** 업체 기록을 읽거나 고칠 수 있는지: 컨설턴트이거나 업체 코드가 맞아야 합니다. */
 function needBiz_(req, id) {
   if (!id) throw fail_('bad_request', '업체가 지정되지 않았습니다.');
@@ -98,6 +120,7 @@ function route_(req) {
 
     case 'getVoice': needBiz_(req, id); return getRow_('voices', id);
     case 'saveVoice': needAdmin_(req); setRow_('voices', id, req.voice); return true;
+    case 'saveOwnVoice': needBiz_(req, id); return saveOwnVoice_(id, req.voice);
     case 'delVoice': needAdmin_(req); delRow_('voices', id); return true;
     case 'getReport': needBiz_(req, id); return getRow_('reports', id);
     case 'saveReport': needAdmin_(req); setRow_('reports', id, req.report); return true;

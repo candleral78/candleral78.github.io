@@ -1,0 +1,47 @@
+// 대표님 화면에서 고객 목소리 넣기 → 글감, 컨설턴트 자료(참고 업체·벤치마킹)는 그대로
+// 사용: (blog-writer/test 폴더에서) python3 ../src/build.py --test → node mock-server.mjs & → node test-owner-voice.mjs
+import {chromium} from 'playwright'; import fs from 'fs';
+process.chdir(new URL('.',import.meta.url).pathname);
+const b=await chromium.launch({executablePath:process.env.CHROMIUM||undefined});
+const map={'qrcode.min.js':'node_modules/qrcode-generator/qrcode.js','pdf.min.js':'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':'node_modules/pdfjs-dist/build/pdf.worker.min.js','html2canvas.min.js':'node_modules/html2canvas/dist/html2canvas.min.js','jspdf.umd.min.js':'node_modules/jspdf/dist/jspdf.umd.min.js'};
+let fails=0; const check=(n,c,x)=>{ console.log((c?'  통과 ':'  실패 ')+n+(c||x===undefined?'':' → '+JSON.stringify(x).slice(0,300))); if(!c)fails++ };
+const api=async(action,p)=>(await (await fetch('http://localhost:8787/exec',{method:'POST',body:JSON.stringify(Object.assign({action},p))})).json());
+async function open(ctx,path='/'){ const p=await ctx.newPage(); await p.route('https://cdnjs.cloudflare.com/**',r=>{const k=r.request().url().split('/').pop();r.fulfill({body:fs.readFileSync(map[k]),contentType:'text/javascript'})});
+  const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p._errs=errs; await p.goto('http://localhost:8787'+path); await p.waitForTimeout(700); return p }
+const c1=await b.newContext({viewport:{width:420,height:900}}); const p=await open(c1);
+await p.fill('#place-url','https://naver.me/Voice1234'); await p.click('#btn-lookup'); await p.waitForTimeout(500);
+await p.setInputFiles('#cap-file','sample-card.png'); await p.click('#btn-cap'); await p.waitForFunction(()=>!document.getElementById('btn-cap').disabled);
+await p.fill('#f-code','246810'); await p.click('#btn-biz-save'); await p.waitForFunction(()=>!document.getElementById('s2').hidden,null,{timeout:10000});
+const bizId=(await api('listBiz',{adminPw:'admin1234'})).data.map(x=>x.id).find(x=>x!=='example'); console.log('업체', bizId);
+console.log('== 대표님 화면: 자료가 없을 때');
+await p.click('#q-mode button[data-mode=b]'); await p.waitForTimeout(300);
+const t0=await p.textContent('#pane-b');
+check('컨설턴트 화면 안내 대신 직접 넣는 칸', !/컨설턴트 화면/.test(t0) && !!(await p.$('#o-v-text')) && !!(await p.$('#o-v-file')));
+console.log('== 대표님이 리뷰를 넣음');
+await p.fill('#o-v-text','주차가 한 대뿐이라 아쉬웠어요. 원장님이 친절하세요. 예약 없이 가도 되나요?');
+await p.click('#btn-o-v-add'); await p.waitForFunction(()=>document.querySelectorAll('#pane-b .rv-topic').length>0,null,{timeout:15000}).catch(()=>{});
+check('글감이 바로 나옴', (await p.$$('#pane-b .rv-topic')).length>=1, await p.textContent('#pane-b'));
+check('넣었다는 안내', /넣었습니다/.test(await p.textContent('#o-v-status')||''));
+let v=(await api('getVoice',{id:bizId,code:'246810'})).data;
+check('서버에 우리 업체 자료·글감 저장', v && v.own.questions.length>=1 && v.ideas.length>=1 && v.sources.length===1 && v.sources[0].who==='own', v);
+console.log('== 컨설턴트 자료는 그대로');
+v.ref={names:['참고집'],facts:[],liked:['빠른 응대'],concerns:[],notable:[],questions:[],aspects:[],words:[]}; v.bench={strengths:['빠른 응대'],gaps:[],actions:[{text:'예약 안내 고정',done:false}]};
+v.sources.push({at:new Date().toISOString(),who:'ref',refName:'참고집',kind:'리뷰',count:3});
+check('컨설턴트 저장', (await api('saveVoice',{id:bizId,voice:v,adminPw:'admin1234'})).ok);
+const hack=JSON.parse(JSON.stringify(v)); hack.ref.liked=['바뀜']; hack.bench.actions=[]; hack.sources=hack.sources.filter(x=>x.who==='own');
+check('대표님 저장 요청', (await api('saveOwnVoice',{id:bizId,voice:hack,code:'246810'})).ok);
+const v2=(await api('getVoice',{id:bizId,code:'246810'})).data;
+check('참고 업체·벤치마킹·참고 기록은 대표님이 바꾸지 못함', v2.ref.liked[0]==='빠른 응대' && v2.bench.actions.length===1 && v2.sources.some(x=>x.who==='ref'), v2);
+check('코드가 틀리면 저장 안 됨', !(await api('saveOwnVoice',{id:bizId,voice:hack,code:'000000'})).ok);
+check('컨설턴트 전용 저장은 대표님 코드로 안 됨', !(await api('saveVoice',{id:bizId,voice:hack,code:'246810'})).ok);
+console.log('== 컨설턴트 화면 보관함은 그대로 동작');
+const c3=await b.newContext({viewport:{width:900,height:1000}}); const a=await open(c3,'/?c');
+await a.click('#tab-cons'); await a.fill('#admin-pw','admin1234'); await a.click('#btn-admin'); await a.waitForTimeout(1200);
+await a.click('#tab-voice'); await a.waitForTimeout(400);
+await a.evaluate(id=>{const s=document.getElementById('c-biz');s.value=id;s.dispatchEvent(new Event('change'))},bizId); await a.waitForTimeout(700);
+await a.fill('#v-text','손님 후기: 사장님이 설명을 잘 해 주세요.'); await a.click('#btn-v-add'); await a.waitForFunction(()=>/넣었습니다|못/.test(document.getElementById('v-status').textContent),null,{timeout:15000}).catch(()=>{});
+check('컨설턴트 보관함 넣기', /넣었습니다/.test(await a.textContent('#v-status')), await a.textContent('#v-status'));
+const v3=(await api('getVoice',{id:bizId,code:'246810'})).data;
+check('컨설턴트가 넣은 뒤 자료 3건(대표 1·참고 1·컨설턴트 1)', v3.sources.length===3, v3.sources);
+check('화면 오류 없음', !p._errs.length && !a._errs.length, p._errs.concat(a._errs));
+await b.close(); console.log(fails?`\n실패 ${fails}건`:'\n모두 통과'); process.exit(fails?1:0);
